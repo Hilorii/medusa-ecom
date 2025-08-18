@@ -1,3 +1,6 @@
+.cart-button-in-cart-dropdown {
+    scale: 1.7;
+}
 @media (max-width: 1023px) {
     .cart-button-in-cart-dropdown {
         display: none;

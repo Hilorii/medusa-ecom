@@ -43,24 +43,34 @@
 /* Store, Account and Cart - buttons on navbar */
 .nav-buttons {
     color: white;
-    scale: 1.2;
-}
-@media (max-width: 1300px) {
-    .nav-buttons {
-        scale: 1.1;
-    }
-    .nav-buttons-container {
-        gap: 40px !important;
-    }
+    scale: 1.7;
 }
 .nav-buttons:hover {
     color: #7c7c7c;
 }
 
 .nav-logo {
+    position: absolute;
     font-family: 'Montserrat', sans-serif !important;
     scale: 1.4;
+    letter-spacing: 1.5px;
+    left: 100px;
 }
 .nav-logo:hover {
     color: #6e6e6e;
+}
+.nav-buttons-container {
+    gap: 120px;
+}
+
+@media (max-width: 1023px) {
+    .nav-buttons {
+        scale: 1.1;
+    }
+    .nav-buttons-container {
+        gap: 40px !important;
+    }
+    .nav-logo {
+        position: unset;
+    }
 }

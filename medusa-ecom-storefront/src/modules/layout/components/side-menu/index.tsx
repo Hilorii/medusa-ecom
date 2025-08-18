@@ -9,7 +9,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import CountrySelect from "../country-select"
 import { HttpTypes } from "@medusajs/types"
 
-import "./menu-button.css"
+import "./side-menu.css"
 
 // Icons
 import { IoIosMenu } from "react-icons/io"

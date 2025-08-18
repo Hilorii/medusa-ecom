@@ -115,3 +115,16 @@
 :root {
   --font-sans: 'Montserrat', sans-serif;
 }
+
+body {
+  background: url("../../public/background.png") no-repeat center center fixed;
+  background-size: cover;
+  color: #fff;
+  min-height: 100vh;
+}
+@media (max-width: 768px) {
+  body {
+    background: url("../../public/background_mobile.png") no-repeat center center fixed;
+    background-size: cover;
+  }
+}

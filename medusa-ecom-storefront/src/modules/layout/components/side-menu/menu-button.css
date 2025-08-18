@@ -2,3 +2,6 @@
     color: white;
     scale: 2;
 }
+.menu-button:hover {
+    color: white !important;
+}

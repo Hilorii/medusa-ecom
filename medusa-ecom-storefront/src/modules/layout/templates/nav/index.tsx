@@ -26,7 +26,7 @@ export default async function Nav() {
           <div className="flex items-center h-full">
             <LocalizedClientLink
               href="/"
-              className="txt-compact-xlarge-plus hover:text-ui-fg-base uppercase text-white"
+              className="nav-logo txt-compact-xlarge-plus hover:text-ui-fg-base uppercase text-white"
               data-testid="nav-store-link"
             >
               {/*LOGO*/}
@@ -34,6 +34,7 @@ export default async function Nav() {
             </LocalizedClientLink>
           </div>
 
+          {/* BUTTONS ON NAVBAR */}
           <div className="flex items-center gap-x-6 h-full flex-1 basis-0 justify-end">
             <div className="hidden small:flex items-center gap-x-6 h-full">
               <LocalizedClientLink
@@ -41,20 +42,54 @@ export default async function Nav() {
                 href="/store"
                 data-testid="nav-store-link"
               >
-                {/*STORE BUTTON*/}
-                Store
+                {/* HOW IT WORKS BUTTON */}
+                How It Works
               </LocalizedClientLink>
             </div>
             <div className="hidden small:flex items-center gap-x-6 h-full">
               <LocalizedClientLink
                 className="nav-buttons hover:text-ui-fg-base"
-                href="/account"
-                data-testid="nav-account-link"
+                href="/store"
+                data-testid="nav-store-link"
               >
-                {/*ACCOUNT BUTTON*/}
-                Account
+                {/* DESIGN YOUR OWN BUTTON */}
+                Design Your Own
               </LocalizedClientLink>
             </div>
+            <div className="hidden small:flex items-center gap-x-6 h-full">
+              <LocalizedClientLink
+                className="nav-buttons hover:text-ui-fg-base"
+                href="/store"
+                data-testid="nav-store-link"
+              >
+                {/*FAQ BUTTON*/}
+                FAQ
+              </LocalizedClientLink>
+            </div>
+
+            {/* I think that Design Your Own equals store button especially when there is only one product */}
+            {/*<div className="hidden small:flex items-center gap-x-6 h-full">*/}
+            {/*  <LocalizedClientLink*/}
+            {/*    className="nav-buttons hover:text-ui-fg-base"*/}
+            {/*    href="/store"*/}
+            {/*    data-testid="nav-store-link"*/}
+            {/*  >*/}
+            {/*    /!*STORE BUTTON*!/*/}
+            {/*    Store*/}
+            {/*  </LocalizedClientLink>*/}
+            {/*</div>*/}
+
+            {/* I don't think we need users to log in so lets throw it out for now */}
+            {/*<div className="hidden small:flex items-center gap-x-6 h-full">*/}
+            {/*  <LocalizedClientLink*/}
+            {/*    className="nav-buttons hover:text-ui-fg-base"*/}
+            {/*    href="/account"*/}
+            {/*    data-testid="nav-account-link"*/}
+            {/*  >*/}
+            {/*    /!*ACCOUNT BUTTON*!/*/}
+            {/*    Account*/}
+            {/*  </LocalizedClientLink>*/}
+            {/*</div>*/}
             <Suspense
               fallback={
                 <LocalizedClientLink

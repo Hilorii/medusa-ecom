@@ -35,7 +35,7 @@ export default async function Nav() {
           </div>
 
           {/* BUTTONS ON NAVBAR */}
-          <div className="flex items-center gap-x-6 h-full flex-1 basis-0 justify-end">
+          <div className="nav-buttons-container flex items-center gap-x-20 h-full flex-1 basis-0 justify-end">
             <div className="hidden small:flex items-center gap-x-6 h-full">
               <LocalizedClientLink
                 className="nav-buttons hover:text-ui-fg-base"

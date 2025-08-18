@@ -1,7 +1,13 @@
 .menu-button {
     color: white;
-    scale: 2;
+    scale: 2.5;
+    display: none;
 }
 .menu-button:hover {
     color: white !important;
+}
+@media (max-width: 1023px) {
+    .menu-button {
+        display: block;
+    }
 }

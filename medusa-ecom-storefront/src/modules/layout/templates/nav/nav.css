@@ -63,6 +63,16 @@
     gap: 120px;
 }
 
+@media (max-width: 1220px) {
+    .nav-buttons-container {
+        gap: 100px;
+    }
+}
+@media (max-width: 1110px) {
+    .nav-buttons-container {
+        gap: 80px;
+    }
+}
 @media (max-width: 1023px) {
     .nav-buttons {
         scale: 1.1;

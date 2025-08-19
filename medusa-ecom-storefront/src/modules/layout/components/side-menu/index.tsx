@@ -15,9 +15,9 @@ import "./side-menu.css"
 import { IoIosMenu } from "react-icons/io"
 
 const SideMenuItems = {
-  Home: "/",
-  Store: "/store",
-  Account: "/account",
+  "How It Works": "/",
+  "Design Your Own": "/store",
+  FAQ: "/faq",
   Cart: "/cart",
 }
 

@@ -59,6 +59,8 @@ const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
                         <XMark />
                       </button>
                     </div>
+
+                    {/* OPTIONS RENDER */}
                     <ul className="flex flex-col gap-6 items-start justify-start">
                       {Object.entries(SideMenuItems).map(([name, href]) => {
                         return (
@@ -75,27 +77,29 @@ const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
                         )
                       })}
                     </ul>
+
+                    {/* Column with Shipping to button and trademark */}
                     <div className="flex flex-col gap-y-6">
-                      <div
-                        className="flex justify-between"
-                        onMouseEnter={toggleState.open}
-                        onMouseLeave={toggleState.close}
-                      >
-                        {regions && (
-                          <CountrySelect
-                            toggleState={toggleState}
-                            regions={regions}
-                          />
-                        )}
-                        <ArrowRightMini
-                          className={clx(
-                            "transition-transform duration-150",
-                            toggleState.state ? "-rotate-90" : ""
-                          )}
-                        />
-                      </div>
+                      {/*<div*/}
+                      {/*  className="flex justify-between"*/}
+                      {/*  onMouseEnter={toggleState.open}*/}
+                      {/*  onMouseLeave={toggleState.close}*/}
+                      {/*>*/}
+                      {/*  {regions && (*/}
+                      {/*    <CountrySelect*/}
+                      {/*      toggleState={toggleState}*/}
+                      {/*      regions={regions}*/}
+                      {/*    />*/}
+                      {/*  )}*/}
+                      {/*  <ArrowRightMini*/}
+                      {/*    className={clx(*/}
+                      {/*      "transition-transform duration-150",*/}
+                      {/*      toggleState.state ? "-rotate-90" : ""*/}
+                      {/*    )}*/}
+                      {/*  />*/}
+                      {/*</div>*/}
                       <Text className="flex justify-between txt-compact-small">
-                        © {new Date().getFullYear()} Medusa Store. All rights
+                        © {new Date().getFullYear()} Glitch Glow. All rights
                         reserved.
                       </Text>
                     </div>

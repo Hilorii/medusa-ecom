@@ -1,10 +1,13 @@
-.privacy-wrap { color: white; }
+.privacy-wrap {
+    color: white;
+    margin-bottom: 0px;
+}
 .privacy-card {
     background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
     backdrop-filter: blur(16px) saturate(120%);
     -webkit-backdrop-filter: blur(16px) saturate(120%);
     border: 1px solid rgba(255,255,255,.10);
-    margin-top: 800px;
+    margin-top: 80px;
 }
 .privacy-title { font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.25rem); font-weight: 800; }
 .privacy-subtitle { margin-top: .25rem; color: rgba(255,255,255,.65); }

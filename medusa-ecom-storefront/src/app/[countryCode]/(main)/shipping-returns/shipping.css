@@ -1,4 +1,7 @@
-.shipping-wrap { color: white; }
+.shipping-wrap {
+    color: white;
+    margin-bottom: -120px;
+}
 .shipping-card {
     background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
     backdrop-filter: blur(16px) saturate(120%);

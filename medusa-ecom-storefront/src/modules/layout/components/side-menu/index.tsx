@@ -18,6 +18,7 @@ const SideMenuItems = {
   "How It Works": "/",
   "Design Your Own": "/store",
   FAQ: "/faq",
+  Contact: "/contact",
   Cart: "/cart",
 }
 

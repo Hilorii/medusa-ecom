@@ -25,7 +25,7 @@ export default async function Nav() {
             <LocalizedClientLink
               href="/"
               className="nav-logo txt-compact-xlarge-plus hover:text-ui-fg-base uppercase text-white"
-              data-testid="nav-store-link"
+              data-testid="nav-logo-link"
             >
               {/*LOGO*/}
               GLITCH GLOW
@@ -33,12 +33,12 @@ export default async function Nav() {
           </div>
 
           {/* BUTTONS ON NAVBAR */}
-          <div className="nav-buttons-container flex items-center gap-x-20 h-full flex-1 basis-0 justify-end">
+          <div className="nav-buttons-container flex items-center gap-x-20 h-full flex-1 basis-80 justify-end">
             <div className="hidden small:flex items-center gap-x-6 h-full">
               <LocalizedClientLink
                 className="nav-buttons hover:text-ui-fg-base"
                 href="/how-it-works"
-                data-testid="nav-store-link"
+                data-testid="nav-hiw-link"
               >
                 {/* HOW IT WORKS BUTTON */}
                 How It Works
@@ -48,7 +48,7 @@ export default async function Nav() {
               <LocalizedClientLink
                 className="nav-buttons hover:text-ui-fg-base"
                 href="/design"
-                data-testid="nav-store-link"
+                data-testid="nav-design-link"
               >
                 {/* DESIGN YOUR OWN BUTTON */}
                 Design Your Own
@@ -58,10 +58,20 @@ export default async function Nav() {
               <LocalizedClientLink
                 className="nav-buttons hover:text-ui-fg-base"
                 href="/faq"
-                data-testid="nav-store-link"
+                data-testid="nav-faq-link"
               >
                 {/*FAQ BUTTON*/}
                 FAQ
+              </LocalizedClientLink>
+            </div>
+            <div className="hidden small:flex items-center gap-x-6 h-full">
+              <LocalizedClientLink
+                className="nav-buttons hover:text-ui-fg-base"
+                href="/contact"
+                data-testid="nav-contact-link"
+              >
+                {/* CONTACT BUTTON */}
+                Contact
               </LocalizedClientLink>
             </div>
 

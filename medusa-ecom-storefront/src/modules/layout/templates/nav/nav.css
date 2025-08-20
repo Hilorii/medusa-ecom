@@ -81,6 +81,10 @@
         gap: 40px !important;
     }
     .nav-logo {
-        position: unset;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-30%, -50%);
+        /*position: unset;*/
     }
 }

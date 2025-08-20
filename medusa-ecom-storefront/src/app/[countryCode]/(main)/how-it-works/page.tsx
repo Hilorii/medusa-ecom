@@ -43,9 +43,13 @@ export default function HowItWorksPage() {
         {/* steps */}
         <ol className="hiw-steps" role="list">
           {/* step 1 */}
-          <li className="hiw-step hiw-step-1">
-            <div className="hiw-icon">
-              <img src="/hiw-icon-1.png" alt="" aria-hidden="true" />
+          <li
+            className="hiw-step hiw-step-1"
+            tabIndex={0}
+            aria-label="Create your masterpiece"
+          >
+            <div className="hiw-icon" aria-hidden="true">
+              <img src="/hiw-icon-1.png" alt="" />
             </div>
             <div className="hiw-content">
               <h2 className="hiw-h2">1. Create Your Masterpiece</h2>
@@ -58,9 +62,13 @@ export default function HowItWorksPage() {
           </li>
 
           {/* step 2 */}
-          <li className="hiw-step hiw-step-2">
-            <div className="hiw-icon">
-              <img src="/hiw-icon-2.png" alt="" aria-hidden="true" />
+          <li
+            className="hiw-step hiw-step-2"
+            tabIndex={0}
+            aria-label="We bring it to life"
+          >
+            <div className="hiw-icon" aria-hidden="true">
+              <img src="/hiw-icon-2.png" alt="" />
             </div>
             <div className="hiw-content">
               <h2 className="hiw-h2">2. We Bring It to Life</h2>
@@ -72,9 +80,13 @@ export default function HowItWorksPage() {
           </li>
 
           {/* step 3 */}
-          <li className="hiw-step hiw-step-3">
-            <div className="hiw-icon">
-              <img src="/hiw-icon-3.png" alt="" aria-hidden="true" />
+          <li
+            className="hiw-step hiw-step-3"
+            tabIndex={0}
+            aria-label="Unbox the glow"
+          >
+            <div className="hiw-icon" aria-hidden="true">
+              <img src="/hiw-icon-3.png" alt="" />
             </div>
             <div className="hiw-content">
               <h2 className="hiw-h2">3. Unbox the Glow</h2>

@@ -3,10 +3,10 @@
     color: white;
     margin-top: 50px;
     margin-bottom: -120px;
+    padding-bottom: max(4rem, env(safe-area-inset-bottom));
 }
 
 .hiw-card {
-    /* CSS var controls accents across the card */
     --hiw-grad: linear-gradient(90deg, #00e5ff, #ff00ff, #b6ff00);
     --hiw-grad-soft: linear-gradient(90deg, #00e5ff33, #ff00ff33, #b6ff0033);
 
@@ -16,8 +16,8 @@
     border: 1px solid rgba(255,255,255,.10);
     position: relative;
     overflow: hidden;
-    /* soft inner glow rim */
     box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+    touch-action: manipulation;
 }
 
 /* Header */
@@ -38,7 +38,6 @@
 }
 
 /* ------------------ Accent switcher (CSS-only) ------------------ */
-/* Radio inputs are visually hidden but accessible */
 .hiw-switcher {
     margin: 0 auto 1.25rem;
     display: flex;
@@ -77,10 +76,10 @@
     position: relative;
     display: grid;
     gap: 1.1rem;
-    padding-left: 2.75rem; /* space for timeline line & nodes */
+    padding-left: 2.75rem;
 }
 
-/* animated gradient line */
+/* gradient line */
 .hiw-steps::before {
     content: "";
     position: absolute;
@@ -95,7 +94,7 @@
     mask-image: linear-gradient(to bottom, transparent, white 10%, white 90%, transparent);
 }
 
-/* each step */
+/* every step */
 .hiw-step {
     display: grid;
     grid-template-columns: 2.4rem 1fr;
@@ -109,12 +108,13 @@
     animation: hiw-fadeUp .7s ease forwards;
     transition: transform .18s ease, background .18s ease, border-color .18s ease;
     will-change: transform;
+    cursor: pointer;
 }
 .hiw-step-1 { animation-delay: .06s; }
 .hiw-step-2 { animation-delay: .18s; }
 .hiw-step-3 { animation-delay: .30s; }
 
-/* node dot */
+/* node */
 .hiw-step::before {
     content: "";
     position: absolute;
@@ -129,7 +129,7 @@
     transition: transform .25s ease, box-shadow .25s ease;
 }
 
-/* icon box */
+/* icon */
 .hiw-icon {
     width: 3rem; height: 3rem;
     border-radius: .8rem;
@@ -146,7 +146,6 @@
     scale: 2.5;
 }
 
-/* headings & body */
 .hiw-h2 {
     font-weight: 800;
     font-size: clamp(1.05rem, 1rem + .4vw, 1.25rem);
@@ -156,25 +155,30 @@
     color: rgba(255,255,255,.9);
     line-height: 1.7;
     max-height: 0;
-    opacity: .0;
+    opacity: 0;
     overflow: hidden;
     transition: max-height .35s ease, opacity .35s ease;
 }
 
-/* interactive expansion */
 .hiw-step:hover,
-.hiw-step:focus-within {
+.hiw-step:focus,
+.hiw-step:focus-within,
+.hiw-step:active {
     transform: translateY(0) scale(1);
     background: rgba(255,255,255,.05);
     border-color: rgba(255,255,255,.16);
 }
 .hiw-step:hover .hiw-p,
-.hiw-step:focus-within .hiw-p {
+.hiw-step:focus .hiw-p,
+.hiw-step:focus-within .hiw-p,
+.hiw-step:active .hiw-p {
     max-height: 500px;
     opacity: 1;
 }
 .hiw-step:hover::before,
-.hiw-step:focus-within::before {
+.hiw-step:focus::before,
+.hiw-step:focus-within::before,
+.hiw-step:active::before {
     transform: scale(1.2);
     box-shadow:
             0 0 0 5px rgba(255,255,255,.18),
@@ -222,6 +226,45 @@
     100% { opacity: .55; }
 }
 
+/* ------------------ Mobile tweaks ------------------ */
+@media (max-width: 640px) {
+
+    .hiw-wrap {
+        margin-top: 32px;
+        margin-bottom: 0;
+        padding-inline: 1rem;
+    }
+
+    .hiw-steps {
+        padding-left: 2.1rem;
+        gap: .9rem;
+    }
+    .hiw-steps::before { left: .85rem; }
+
+    .hiw-step {
+        grid-template-columns: 2rem 1fr;
+        padding: .9rem .9rem;
+    }
+    .hiw-step::before {
+        left: .7rem;
+        width: .55rem; height: .55rem;
+        translate: 0 .8rem;
+    }
+
+    .hiw-icon { width: 2.2rem; height: 2.2rem; border-radius: .6rem; }
+    .hiw-icon img { width: 1rem; height: 1rem; scale: 2.2; }
+
+    .hiw-p { max-height: 500px; opacity: 1; }
+}
+
+@media (max-width: 360px) {
+    .hiw-steps { padding-left: 0; }
+    .hiw-steps::before { display: none; }
+    .hiw-step { grid-template-columns: 1fr; }
+    .hiw-step::before { display: none; }
+    .hiw-icon { margin-bottom: .25rem; }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
     .hiw-step { animation: none; opacity: 1; transform: none; }
@@ -229,7 +272,7 @@
     .hiw-button, .hiw-secondary { transition: none; }
 }
 
-/* Screen-reader utility (you can keep one global, adding here for isolation) */
+/* Screen-reader utility */
 .sr-only {
     position: absolute !important;
     width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;

@@ -7,8 +7,6 @@ import CartButton from "@modules/layout/components/cart-button"
 import SideMenu from "@modules/layout/components/side-menu"
 import "./nav.css"
 
-// Icons
-
 export default async function Nav() {
   const regions = await listRegions().then((regions: StoreRegion[]) => regions)
 
@@ -39,7 +37,7 @@ export default async function Nav() {
             <div className="hidden small:flex items-center gap-x-6 h-full">
               <LocalizedClientLink
                 className="nav-buttons hover:text-ui-fg-base"
-                href="/store"
+                href="/how-it-works"
                 data-testid="nav-store-link"
               >
                 {/* HOW IT WORKS BUTTON */}
@@ -49,7 +47,7 @@ export default async function Nav() {
             <div className="hidden small:flex items-center gap-x-6 h-full">
               <LocalizedClientLink
                 className="nav-buttons hover:text-ui-fg-base"
-                href="/store"
+                href="/design"
                 data-testid="nav-store-link"
               >
                 {/* DESIGN YOUR OWN BUTTON */}
@@ -59,7 +57,7 @@ export default async function Nav() {
             <div className="hidden small:flex items-center gap-x-6 h-full">
               <LocalizedClientLink
                 className="nav-buttons hover:text-ui-fg-base"
-                href="/store"
+                href="/faq"
                 data-testid="nav-store-link"
               >
                 {/*FAQ BUTTON*/}

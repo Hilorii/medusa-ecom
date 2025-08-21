@@ -3,9 +3,6 @@
 import {
   Footer as FBFooter,
   FooterBrand,
-  FooterCopyright,
-  FooterDivider,
-  FooterIcon,
   FooterLink,
   FooterLinkGroup,
   FooterTitle,
@@ -23,7 +20,7 @@ import "./footer.css"
 
 export default function Footer() {
   return (
-    <FBFooter container className="footer">
+    <FBFooter container className="footer" role="contentinfo">
       <div className="w-full">
         <div className="grid w-full justify-between sm:flex sm:justify-between md:flex md:grid-cols-1">
           <div>
@@ -57,24 +54,14 @@ export default function Footer() {
           </div>
         </div>
 
-        {/*<FooterDivider />*/}
-
-        {/* SOCIAL MEDIA ICONS */}
-        {/*<div className="w-full sm:flex sm:items-center sm:justify-between">*/}
-        {/*  <FooterCopyright*/}
-        {/*    href="/"*/}
-        {/*    by="Glitch Glow™"*/}
-        {/*    year={new Date().getFullYear()}*/}
-        {/*  />*/}
-
-        {/*  /!*<div className="mt-4 flex space-x-6 sm:mt-0 sm:justify-center">*!/*/}
-        {/*  /!*  <FooterIcon href="#" icon={BsFacebook} />*!/*/}
-        {/*  /!*  <FooterIcon href="#" icon={BsInstagram} />*!/*/}
-        {/*  /!*  <FooterIcon href="#" icon={BsTwitter} />*!/*/}
-        {/*  /!*  <FooterIcon href="#" icon={BsGithub} />*!/*/}
-        {/*  /!*  <FooterIcon href="#" icon={BsDribbble} />*!/*/}
-        {/*  /!*</div>*!/*/}
-        {/*</div>*/}
+        {/* Social icons */}
+        {/* <div className="mt-6 flex gap-4">
+          <a aria-label="Facebook" href="#"><BsFacebook /></a>
+          <a aria-label="Instagram" href="#"><BsInstagram /></a>
+          <a aria-label="Twitter / X" href="#"><BsTwitter /></a>
+          <a aria-label="GitHub" href="#"><BsGithub /></a>
+          <a aria-label="Dribbble" href="#"><BsDribbble /></a>
+        </div> */}
       </div>
     </FBFooter>
   )

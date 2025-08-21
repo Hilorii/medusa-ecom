@@ -18,7 +18,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
   return (
     <html lang="en" data-mode="light">
       <body
-        className={`${montserrat.variable} font-sans antialiased min-h-screen`}
+        className={`${montserrat.variable} font-sans antialiased min-h-dvh flex flex-col`}
       >
         <main className="relative">{props.children}</main>
       </body>

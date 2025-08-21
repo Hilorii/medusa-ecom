@@ -6,7 +6,7 @@ import SplitText from "../gsap/split-text"
 import handleAnimationComplete from "../gsap/split-text"
 
 export const metadata: Metadata = {
-  title: "404",
+  title: "Are you lost? - 404",
   description: "Something went wrong",
 }
 

@@ -8,7 +8,7 @@ import { SplitText as GSAPSplitText } from "gsap/SplitText"
 gsap.registerPlugin(ScrollTrigger, GSAPSplitText)
 
 const SplitText = ({
-  text,
+  text = "",
   className = "",
   delay = 100,
   duration = 0.6,

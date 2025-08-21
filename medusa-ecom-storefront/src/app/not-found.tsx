@@ -1,4 +1,4 @@
-import { ArrowUpRightMini } from "@medusajs/icons"
+// import { ArrowUpRightMini } from "@medusajs/icons"
 import { Text } from "@medusajs/ui"
 import { Metadata } from "next"
 import Link from "next/link"

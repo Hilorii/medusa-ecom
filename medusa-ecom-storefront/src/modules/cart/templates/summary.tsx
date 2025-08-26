@@ -1,10 +1,12 @@
 "use client"
 
 import { Button, Heading } from "@medusajs/ui"
+
 import CartTotals from "@modules/common/components/cart-totals"
 import DiscountCode from "@modules/checkout/components/discount-code"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HttpTypes } from "@medusajs/types"
+
 import "./summary.css"
 
 type SummaryProps = {
@@ -32,13 +34,15 @@ const Summary = ({ cart }: SummaryProps) => {
         Summary
       </Heading>
 
-      <div className="rrc-card-section">
+      {/* Kupon w „glass” z dashed border */}
+      <div className="rrc-coupon rrc-glass rrc-elevate">
         <DiscountCode cart={cart} />
       </div>
 
       <div className="rrc-divider" />
 
-      <div className="rrc-card-section">
+      {/* Totals – zostawiamy logikę, dopieszczamy wygląd kontenera */}
+      <div className="rrc-totals">
         <CartTotals totals={cart} />
       </div>
 

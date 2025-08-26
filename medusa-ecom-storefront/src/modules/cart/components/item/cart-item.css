@@ -1,26 +1,37 @@
+/* row feel */
 .rrc-item-row { width: 100%; transition: background .2s ease; }
 .rrc-item-row:hover { background: rgba(255,255,255,0.35); }
 
+/* thumbnail */
 .rrc-item-thumb { padding-left: 0 !important; padding: 12px; width: 96px; }
 .rrc-thumb-link { display: flex; }
 .rrc-thumb-preview { width: 64px; }
 .rrc-thumb-full { width: 96px; }
 @media (max-width: 640px) { .rrc-thumb-full { width: 64px; } }
 
+/* title / options */
 .rrc-item-main { text-align: left; }
 .rrc-item-title { font-weight: 700 !important; }
 
-.rrc-item-qty { min-width: 160px; }
-.rrc-qty-wrap { display: flex; gap: 8px; align-items: center; }
+/* quantity */
+.rrc-item-qty { min-width: 190px; }             /* SZERZEJ – mieści select */
+.rrc-qty-wrap { display: flex; gap: 10px; align-items: center; }
 .rrc-muted { color: rgba(0,0,0,0.55); }
 
-.rrc-item-unit { white-space: nowrap; }
+/* price + total with tabular numbers */
+.rrc-item-unit,
+.rrc-item-total {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;            /* cyfry nie „skaczą” */
+}
 
 .rrc-item-total { padding-right: 0 !important; text-align: right; }
-.rrc-total-preview { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; height: 100%; }
+.rrc-total-preview {
+    display: flex; flex-direction: column; align-items: flex-end; justify-content: center; height: 100%;
+}
 .rrc-total-inline { display: flex; gap: 6px; }
 
 @media (max-width: 640px) {
-    .rrc-item-qty { min-width: 120px; }
+    .rrc-item-qty { min-width: 160px; }
     .rrc-item-unit { display: none !important; }
 }

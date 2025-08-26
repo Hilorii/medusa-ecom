@@ -1,9 +1,8 @@
 import ItemsTemplate from "./items"
 import Summary from "./summary"
 import EmptyCartMessage from "../components/empty-cart-message"
-import SignInPrompt from "../components/sign-in-prompt"
-import Divider from "@modules/common/components/divider"
 import { HttpTypes } from "@medusajs/types"
+import "./cart.css"
 
 const CartTemplate = ({
   cart,
@@ -12,34 +11,30 @@ const CartTemplate = ({
   cart: HttpTypes.StoreCart | null
   customer: HttpTypes.StoreCustomer | null
 }) => {
+  const hasItems = !!cart?.items?.length
+
   return (
-    <div className="py-12">
-      <div className="content-container" data-testid="cart-container">
-        {cart?.items?.length ? (
-          <div className="grid grid-cols-1 small:grid-cols-[1fr_360px] gap-x-40">
-            <div className="flex flex-col bg-white py-6 gap-y-6">
-              {!customer && (
-                <>
-                  <SignInPrompt />
-                  <Divider />
-                </>
-              )}
-              <ItemsTemplate cart={cart} />
+    <div className="rrc-cart-page">
+      <div className="rrc-cart-container" data-testid="cart-container">
+        {hasItems ? (
+          <div className="rrc-cart-grid">
+            <div className="rrc-cart-left rrc-glass rrc-elevate">
+              {/* usuwamy logowanie z UI (na prośbę) */}
+              <ItemsTemplate cart={cart!} />
             </div>
-            <div className="relative">
-              <div className="flex flex-col gap-y-8 sticky top-12">
+
+            <aside className="rrc-cart-right">
+              <div className="rrc-sticky">
                 {cart && cart.region && (
-                  <>
-                    <div className="bg-white py-6">
-                      <Summary cart={cart as any} />
-                    </div>
-                  </>
+                  <div className="rrc-glass rrc-elevate">
+                    <Summary cart={cart as any} />
+                  </div>
                 )}
               </div>
-            </div>
+            </aside>
           </div>
         ) : (
-          <div>
+          <div className="rrc-empty-wrap">
             <EmptyCartMessage />
           </div>
         )}

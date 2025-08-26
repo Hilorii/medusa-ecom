@@ -1,0 +1,61 @@
+/* ---- CART PAGE (rrc = Raven Road Cart) ---- */
+
+.rrc-cart-page {
+    padding: 3rem 0;
+}
+
+.rrc-cart-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+.rrc-cart-grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 48px;
+}
+
+.rrc-cart-left {
+    padding: 20px 20px 12px;
+}
+
+.rrc-cart-right .rrc-sticky {
+    position: sticky;
+    top: 16px;
+}
+
+.rrc-empty-wrap {
+    padding: 24px 0;
+}
+
+/* glass + elevation (spójne z Twoim sklepem) */
+.rrc-glass {
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(10px) saturate(120%);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 16px;
+}
+
+.rrc-elevate {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.07);
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+.rrc-elevate:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 36px rgba(0,0,0,0.10);
+}
+
+/* RESPONSIVE */
+@media (max-width: 1024px) {
+    .rrc-cart-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+}
+
+@media (max-width: 640px) {
+    .rrc-cart-page { padding: 1.5rem 0; }
+    .rrc-cart-left { padding: 16px; }
+}

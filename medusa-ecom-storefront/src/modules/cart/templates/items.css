@@ -1,0 +1,37 @@
+.rrc-items {}
+
+.rrc-header {
+    padding-bottom: 8px;
+    display: flex;
+    align-items: center;
+}
+
+.rrc-title {
+    font-size: 2rem !important;
+    line-height: 2.6rem !important;
+}
+
+.rrc-table-wrap {
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.06);
+}
+
+/* header look */
+.rrc-table-header {
+    background: linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,.4));
+}
+
+.rrc-row-head {
+    color: rgba(0,0,0,0.55);
+    font-weight: 600;
+}
+
+.rrc-cell-left { padding-left: 0 !important; }
+.rrc-cell-right { padding-right: 0 !important; }
+.rrc-text-right { text-align: right; }
+
+/* hide on small */
+@media (max-width: 640px) {
+    .rrc-hide-small { display: none !important; }
+}

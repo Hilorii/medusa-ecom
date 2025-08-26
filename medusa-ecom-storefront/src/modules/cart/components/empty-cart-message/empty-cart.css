@@ -1,0 +1,15 @@
+.rrc-empty {
+    padding: 72px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.rrc-empty-title { font-size: 1.75rem !important; }
+.rrc-empty-text { max-width: 36rem; }
+.rrc-empty-action { margin-top: 8px; }
+
+@media (max-width: 640px) {
+    .rrc-empty { padding: 56px 16px; }
+}

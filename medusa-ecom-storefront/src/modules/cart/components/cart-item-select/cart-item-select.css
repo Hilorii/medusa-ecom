@@ -1,0 +1,34 @@
+.rrc-select-wrap { position: relative; }
+
+.rrc-select-badge {
+    position: relative;
+    display: flex;
+    align-items: center;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: rgba(255,255,255,0.65);
+    transition: box-shadow .15s ease, transform .15s ease;
+    height: 40px;
+}
+.rrc-select-badge:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.08); transform: translateY(-1px); }
+.rrc-select-placeholder { color: rgba(0,0,0,0.4); }
+
+.rrc-select {
+    appearance: none;
+    background: transparent;
+    border: none;
+    padding: 0 36px 0 14px;
+    outline: none;
+    width: 70px;
+    height: 40px;
+    font-weight: 600;
+}
+
+.rrc-select-caret {
+    position: absolute;
+    right: 8px;
+    width: 24px;
+    display: flex;
+    pointer-events: none;
+    justify-content: center;
+}

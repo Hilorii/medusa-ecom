@@ -11,6 +11,7 @@ import {
 } from "react"
 
 import ChevronDown from "@modules/common/icons/chevron-down"
+import "./cart-item-select.css"
 
 type NativeSelectProps = {
   placeholder?: string
@@ -37,29 +38,21 @@ const CartItemSelect = forwardRef<HTMLSelectElement, NativeSelectProps>(
     }, [innerRef.current?.value])
 
     return (
-      <div>
+      <div className={clx("rrc-select-wrap", className)}>
         <IconBadge
           onFocus={() => innerRef.current?.focus()}
           onBlur={() => innerRef.current?.blur()}
-          className={clx(
-            "relative flex items-center txt-compact-small border text-ui-fg-base group",
-            className,
-            {
-              "text-ui-fg-subtle": isPlaceholder,
-            }
-          )}
+          className={clx("rrc-select-badge", {
+            "rrc-select-placeholder": isPlaceholder,
+          })}
         >
-          <select
-            ref={innerRef}
-            {...props}
-            className="appearance-none bg-transparent border-none px-4 transition-colors duration-150 focus:border-gray-700 outline-none w-16 h-16 items-center justify-center"
-          >
+          <select ref={innerRef} {...props} className="rrc-select">
             <option disabled value="">
               {placeholder}
             </option>
             {children}
           </select>
-          <span className="absolute flex pointer-events-none justify-end w-8 group-hover:animate-pulse">
+          <span className="rrc-select-caret">
             <ChevronDown />
           </span>
         </IconBadge>

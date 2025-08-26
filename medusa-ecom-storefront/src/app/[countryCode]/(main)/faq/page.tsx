@@ -30,7 +30,7 @@ export default function FAQPage() {
             <div className="faq-a">
               Typical production time is <strong>7–14 business days</strong>{" "}
               depending on design complexity. We’ll share an estimated timeline
-              at checkout and in your order confirmation.
+              at checkout and in your order confirmation..
             </div>
           </details>
 

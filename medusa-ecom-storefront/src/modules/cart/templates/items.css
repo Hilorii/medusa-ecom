@@ -1,13 +1,66 @@
-/* ----- TABLE WRAPPER ----- */
-.rrc-table-wrap {
+/* ----- GRID TABLE (zamiast @medusajs/ui/Table) ----- */
+
+.rrc-grid-wrap {
     overflow: hidden;
     border-radius: 16px;
     border: 1px solid rgba(255,255,255,0.35);
+    /* Tu możesz ustawić dowolne tło, także w pełni transparentne */
+    background: rgba(255,255,255,0.0);
 }
 
-/* glass utils */
+.rrc-grid-head,
+.rrc-row {
+    display: grid;
+    grid-template-columns: 96px 1fr 190px 160px 160px; /* thumb | details | qty | unit | total */
+    align-items: center;
+    gap: 0;
+}
+
+.rrc-grid-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 12px 12px 10px 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1)); /* subtelny półprzezroczysty header */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.rrc-hcell {
+    font-weight: 600;
+    color: rgba(0,0,0,0.55);
+    font-size: 0.95rem;
+}
+.rrc-cell-left { padding-left: 0 !important; }
+.rrc-cell-right { padding-right: 0 !important; }
+.rrc-text-right { text-align: right; }
+
+.rrc-grid-body { display: block; }
+
+.rrc-skel-row {
+    height: 72px;
+    margin: 6px 0;
+    border-radius: 12px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.25), rgba(255,255,255,0.15));
+    background-size: 200% 100%;
+    animation: rrc-shimmer 1.6s infinite;
+}
+@keyframes rrc-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* kolumny – stałe szerokości jak wcześniej */
+.rrc-col-qty { width: 190px; }
+.rrc-col-price { width: 160px; }
+.rrc-col-total { width: 160px; }
+
+/* tytuł/separatory powyżej */
+.rrc-header { padding-bottom: 8px; display: flex; align-items: center; }
+.rrc-title { font-size: 2rem !important; line-height: 2.6rem !important; }
+
+/* glass utils (jak wcześniej) */
 .rrc-glass {
-    background: rgba(255,255,255,0.45);
     backdrop-filter: blur(10px) saturate(120%);
     -webkit-backdrop-filter: blur(10px) saturate(120%);
 }
@@ -17,29 +70,11 @@
 }
 .rrc-elevate:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(0,0,0,0.10); }
 
-/* header look */
-.rrc-table-header {
-    background: linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,.4));
-}
-.rrc-row-head {
-    color: rgba(0,0,0,0.55);
-    font-weight: 600;
-}
-.rrc-cell-left { padding-left: 0 !important; }
-.rrc-cell-right { padding-right: 0 !important; }
-.rrc-text-right { text-align: right; }
-
-/* column widths */
-.rrc-col-qty { width: 190px; }
-.rrc-col-price { width: 160px; }
-.rrc-col-total { width: 160px; }
-
-/* title + spacing */
-.rrc-header { padding-bottom: 8px; display: flex; align-items: center; }
-.rrc-title { font-size: 2rem !important; line-height: 2.6rem !important; }
-
-/* responsive */
+/* RESPONSIVE */
 @media (max-width: 640px) {
     .rrc-hide-small { display: none !important; }
-    .rrc-col-qty { width: 160px; }
+    .rrc-grid-head,
+    .rrc-row {
+        grid-template-columns: 64px 1fr 160px 0px 120px; /* unit price znika, total mniejszy */
+    }
 }

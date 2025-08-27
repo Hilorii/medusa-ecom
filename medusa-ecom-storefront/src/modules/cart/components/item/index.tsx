@@ -1,6 +1,6 @@
 "use client"
 
-import { Table, Text, clx } from "@medusajs/ui"
+import { Text, clx } from "@medusajs/ui"
 import { updateLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import CartItemSelect from "@modules/cart/components/cart-item-select"
@@ -46,8 +46,9 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
   const maxQuantity = item.variant?.manage_inventory ? 10 : maxQtyFromInventory
 
   return (
-    <Table.Row className="rrc-item-row" data-testid="product-row">
-      <Table.Cell className="rrc-item-thumb">
+    <div className="rrc-row" role="row" data-testid="product-row">
+      {/* THUMB */}
+      <div className="rrc-cell rrc-thumb">
         <LocalizedClientLink
           href={`/products/${item.product_handle}`}
           className={clx("rrc-thumb-link", {
@@ -61,17 +62,19 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
             size="square"
           />
         </LocalizedClientLink>
-      </Table.Cell>
+      </div>
 
-      <Table.Cell className="rrc-item-main">
+      {/* MAIN (title + options) */}
+      <div className="rrc-cell rrc-main">
         <Text className="rrc-item-title" data-testid="product-title">
           {item.product_title}
         </Text>
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
-      </Table.Cell>
+      </div>
 
+      {/* QTY */}
       {type === "full" && (
-        <Table.Cell className="rrc-item-qty">
+        <div className="rrc-cell rrc-qty">
           <div className="rrc-qty-wrap">
             <DeleteButton id={item.id} data-testid="product-delete-button" />
             <CartItemSelect
@@ -91,20 +94,22 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
             {updating && <Spinner />}
           </div>
           <ErrorMessage error={error} data-testid="product-error-message" />
-        </Table.Cell>
+        </div>
       )}
 
+      {/* UNIT PRICE (hidden on small) */}
       {type === "full" && (
-        <Table.Cell className="rrc-item-unit rrc-hide-small">
+        <div className="rrc-cell rrc-unit rrc-hide-small">
           <LineItemUnitPrice
             item={item}
             style="tight"
             currencyCode={currencyCode}
           />
-        </Table.Cell>
+        </div>
       )}
 
-      <Table.Cell className="rrc-item-total">
+      {/* TOTAL */}
+      <div className="rrc-cell rrc-total">
         <span
           className={clx({
             "rrc-total-preview": type === "preview",
@@ -126,8 +131,8 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
             currencyCode={currencyCode}
           />
         </span>
-      </Table.Cell>
-    </Table.Row>
+      </div>
+    </div>
   )
 }
 

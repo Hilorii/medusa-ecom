@@ -1,3 +1,4 @@
+/* Scroll container for preview list */
 .rrc-preview { padding-left: 1px; }
 .rrc-preview-scroll {
     max-height: 420px;
@@ -10,3 +11,21 @@
     background: rgba(0,0,0,0.15);
     border-radius: 8px;
 }
+
+/* Skeleton bar (gdy ładuje) */
+.rrc-skel-row {
+    height: 60px;
+    margin: 6px 4px;
+    border-radius: 10px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.26), rgba(255,255,255,0.15));
+    background-size: 200% 100%;
+    animation: rrc-shimmer 1.6s infinite;
+}
+
+@keyframes rrc-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Make sure the preview list stacks correctly */
+.rrc-preview-body { display: block; }

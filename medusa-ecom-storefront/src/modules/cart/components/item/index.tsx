@@ -39,7 +39,11 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
   const maxQuantity = item.variant?.manage_inventory ? 10 : maxQtyFromInventory
 
   return (
-    <div className="rrc-row" role="row" data-testid="product-row">
+    <div
+      className={clx("rrc-row", { "rrc-row--preview": type === "preview" })}
+      role="row"
+      data-testid="product-row"
+    >
       {/* THUMB */}
       <div className="rrc-cell rrc-thumb">
         <LocalizedClientLink
@@ -57,7 +61,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
         </LocalizedClientLink>
       </div>
 
-      {/* MAIN (title + options) */}
+      {/* MAIN */}
       <div className="rrc-cell rrc-main">
         <Text className="rrc-item-title" data-testid="product-title">
           {item.product_title}
@@ -65,7 +69,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
       </div>
 
-      {/* QTY */}
+      {/* QTY – tylko w pełnym widoku */}
       {type === "full" && (
         <div className="rrc-cell rrc-qty">
           <div className="rrc-qty-wrap">
@@ -80,9 +84,6 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
                   {i + 1}
                 </option>
               ))}
-              <option value={1} key={"fallback-1"}>
-                1
-              </option>
             </CartItemSelect>
             {updating && <Spinner />}
           </div>
@@ -90,7 +91,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
         </div>
       )}
 
-      {/* UNIT PRICE (hidden on small) */}
+      {/* UNIT – ukrywany w preview i na small */}
       {type === "full" && (
         <div className="rrc-cell rrc-unit rrc-hide-small">
           <LineItemUnitPrice
@@ -103,11 +104,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
 
       {/* TOTAL */}
       <div className="rrc-cell rrc-total">
-        <span
-          className={clx({
-            "rrc-total-preview": type === "preview",
-          })}
-        >
+        <span className={clx({ "rrc-total-preview": type === "preview" })}>
           {type === "preview" && (
             <span className="rrc-total-inline">
               <Text className="rrc-muted">{item.quantity}x </Text>

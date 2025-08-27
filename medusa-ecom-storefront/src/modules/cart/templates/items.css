@@ -95,7 +95,7 @@
     .rrc-qty-head { text-align: right; }
 }
 
-/* <= 560px: Quantity idzie pod nazwę, po PRAWEJ; Total osobno po prawej */
+/* <= 560px: Quantity under name, to the right; Total to the right */
 @media (max-width: 560px) {
     .rrc-grid-head { display: none; } /* head znika – mobilny układ kart */
     .rrc-grid-wrap { padding: 0; }
@@ -104,13 +104,13 @@
         /* thumb | details | total */
         grid-template-columns: 72px 1fr 120px;
         row-gap: 6px;
-        padding: 12px 16px 12px 6px; /* większy L/R */
+        padding: 12px 16px 12px 6px; /* bigger L/R */
         border-radius: 14px;
         margin: 6px 4px;
     }
 }
 
-/* <= 380px: jeszcze węziej, ale wciąż czytelnie */
+/* <= 380px: */
 @media (max-width: 380px) {
     .rrc-row {
         grid-template-columns: 64px 1fr 108px;

@@ -39,7 +39,6 @@ const Summary = ({ cart }: SummaryProps) => {
         </Heading>
       </header>
 
-      {/* Belka kuponu — nie zmieniamy logiki DiscountCode, tylko wygląd i layout */}
       <div className="rrc-coupon" aria-label="Promotion code">
         <DiscountCode cart={cart} />
       </div>
@@ -58,7 +57,6 @@ const Summary = ({ cart }: SummaryProps) => {
         <Button className="rrc-cta">Go to checkout</Button>
       </LocalizedClientLink>
 
-      {/* Sekcja „info” opcjonalnie — lekki hint o bezpieczeństwie / wysyłce */}
       <p className="rrc-footnote">
         Secure checkout • Free returns within 30 days
       </p>

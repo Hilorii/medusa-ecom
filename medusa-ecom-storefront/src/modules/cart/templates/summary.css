@@ -9,7 +9,7 @@
     border: 1px solid rgba(255,255,255,0.35);
 }
 
-/* glass utils — spójne z resztą */
+/* glass utils */
 .rrc-glass {
     background: rgba(255,255,255,0.45);
     backdrop-filter: blur(10px) saturate(120%);
@@ -30,7 +30,7 @@
     background: linear-gradient(90deg, transparent, rgba(0,0,0,.15), transparent);
 }
 
-/* ===== COUPON BAR (override wyglądu DiscountCode bez zmiany logiki) ===== */
+/* ===== COUPON BAR ===== */
 
 .rrc-coupon {
     border: 1px dashed rgba(16,185,129,0.35);
@@ -39,7 +39,6 @@
     background: rgba(236,253,245,0.35);
 }
 
-/* Pola i przyciski wewnątrz DiscountCode — selektory defensywne */
 .rrc-coupon input[type="text"],
 .rrc-coupon input:not([type]),
 .rrc-coupon .field,
@@ -59,8 +58,6 @@
     border-radius: 12px !important;
 }
 
-/* Jeżeli DiscountCode używa layoutu z dwoma elementami obok siebie,
-   dopnij elastyczny układ z przerwami i zawijaniem na mobile */
 .rrc-coupon form,
 .rrc-coupon .coupon-form,
 .rrc-coupon .discount-form {
@@ -77,8 +74,6 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* Wiele implementacji CartTotals renderuje DL albo listę wierszy:
-   dodajemy tylko zachowanie spacing/align – bez twardych selektorów „niszczących” wnętrze */
 .rrc-totals dl,
 .rrc-totals .rows,
 .rrc-totals .list {

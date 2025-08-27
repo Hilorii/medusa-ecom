@@ -7,8 +7,8 @@
     border-radius: 12px;
     border: 1px solid rgba(0,0,0,0.12);
     background: rgba(255,255,255,0.65);
-    height: 44px;               /* wyższe dla czytelności */
-    min-width: 112px;           /* SZERZEJ: widać wybraną liczbę */
+    height: 44px;
+    min-width: 112px;
     transition: box-shadow .15s ease, transform .15s ease, background .15s ease;
 }
 .rrc-select-badge:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.08); transform: translateY(-1px); }
@@ -23,7 +23,7 @@
     width: 100%;
     height: 44px;
     font-weight: 700;
-    text-align: center;         /* cyfra na środku */
+    text-align: center;
     font-variant-numeric: tabular-nums;
 }
 

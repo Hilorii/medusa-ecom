@@ -1,4 +1,4 @@
-/* Desktop/full layout – musi matchować grid z items.css */
+/* Desktop/full layout – must match grid z items.css */
 .rrc-row {
     display: grid;
     grid-template-columns: 104px 1fr 180px 140px 150px;
@@ -12,7 +12,7 @@
 }
 .rrc-row:hover { background: rgba(255,255,255,0.20); }
 
-/* PREVIEW: kompaktowy grid (thumb | details | total) */
+/* PREVIEW: compact grid (thumb | details | total) */
 .rrc-row--preview {
     grid-template-columns: 64px 1fr 120px;
     min-height: 64px;

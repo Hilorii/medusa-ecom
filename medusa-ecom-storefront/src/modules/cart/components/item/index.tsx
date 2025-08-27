@@ -69,7 +69,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
       </div>
 
-      {/* QTY – tylko w pełnym widoku */}
+      {/* QTY – only when fully seen */}
       {type === "full" && (
         <div className="rrc-cell rrc-qty">
           <div className="rrc-qty-wrap">
@@ -91,7 +91,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
         </div>
       )}
 
-      {/* UNIT – ukrywany w preview i na small */}
+      {/* UNIT – hidden in preview and on small */}
       {type === "full" && (
         <div className="rrc-cell rrc-unit rrc-hide-small">
           <LineItemUnitPrice

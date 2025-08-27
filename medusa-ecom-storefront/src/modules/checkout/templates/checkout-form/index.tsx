@@ -5,6 +5,7 @@ import Addresses from "@modules/checkout/components/addresses"
 import Payment from "@modules/checkout/components/payment"
 import Review from "@modules/checkout/components/review"
 import Shipping from "@modules/checkout/components/shipping"
+import "./checkout-form.css"
 
 export default async function CheckoutForm({
   cart,
@@ -25,14 +26,15 @@ export default async function CheckoutForm({
   }
 
   return (
-    <div className="w-full grid grid-cols-1 gap-y-8">
+    <div className="gg-checkout-form w-full grid grid-cols-1 gap-y-8">
       <Addresses cart={cart} customer={customer} />
 
       <Shipping cart={cart} availableShippingMethods={shippingMethods} />
 
       <Payment cart={cart} availablePaymentMethods={paymentMethods} />
 
-      <Review cart={cart} />
+      {/* Not sure how does it work. If it works... */}
+      {/*<Review cart={cart} />*/}
     </div>
   )
 }

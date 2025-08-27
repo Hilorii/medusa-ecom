@@ -109,10 +109,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
               const showValue =
                 promotion.application_method?.value !== undefined &&
                 promotion.application_method?.currency_code !== undefined
-
-              // @ts-ignore
-              // @ts-ignore
-              // @ts-ignore
               return (
                 <li
                   key={promotion.id}

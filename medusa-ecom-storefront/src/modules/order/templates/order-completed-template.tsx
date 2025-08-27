@@ -10,6 +10,8 @@ import ShippingDetails from "@modules/order/components/shipping-details"
 import PaymentDetails from "@modules/order/components/payment-details"
 import { HttpTypes } from "@medusajs/types"
 
+import "./order-completed.css"
+
 type OrderCompletedTemplateProps = {
   order: HttpTypes.StoreOrder
 }
@@ -18,34 +20,71 @@ export default async function OrderCompletedTemplate({
   order,
 }: OrderCompletedTemplateProps) {
   const cookies = await nextCookies()
-
   const isOnboarding = cookies.get("_medusa_onboarding")?.value === "true"
 
   return (
-    <div className="py-6 min-h-[calc(100vh-64px)]">
-      <div className="content-container flex flex-col justify-center items-center gap-y-10 max-w-4xl h-full w-full">
-        {isOnboarding && <OnboardingCta orderId={order.id} />}
-        <div
-          className="flex flex-col gap-4 max-w-4xl h-full bg-white w-full py-10"
-          data-testid="order-complete-container"
-        >
+    <div className="gg-order-complete-wrapper">
+      <div className="content-container gg-container">
+        {isOnboarding && (
+          <div className="gg-glass gg-onboarding">
+            <OnboardingCta orderId={order.id} />
+          </div>
+        )}
+
+        {/* Header panel */}
+        <section className="gg-glass gg-panel">
           <Heading
             level="h1"
-            className="flex flex-col gap-y-3 text-ui-fg-base text-3xl mb-4"
+            className="flex flex-col gap-y-2 text-ui-fg-base text-3xl md:text-4xl text-white"
           >
             <span>Thank you!</span>
-            <span>Your order was placed successfully.</span>
+            <span className="text-ui-fg-subtle text-base md:text-lg text-white">
+              Your order was placed successfully.
+            </span>
           </Heading>
-          <OrderDetails order={order} />
-          <Heading level="h2" className="flex flex-row text-3xl-regular">
-            Summary
-          </Heading>
-          <Items order={order} />
-          <CartTotals totals={order} />
-          <ShippingDetails order={order} />
-          <PaymentDetails order={order} />
-          <Help />
-        </div>
+
+          {/* Order meta in a subtle glass sub-panel for compactness on mobile */}
+          <div className="gg-subpanel-up">
+            <OrderDetails order={order} />
+          </div>
+        </section>
+
+        {/* Summary grid – two columns on desktop, single column on small screens */}
+        <section className="gg-grid">
+          {/* Items + totals column */}
+          <div className="gg-col">
+            <div className="gg-glass gg-panel">
+              <Heading level="h2" className="text-2xl md:text-3xl-regular">
+                Summary
+              </Heading>
+              <Items order={order} />
+              <div className="gg-subpanel">
+                <CartTotals totals={order} />
+              </div>
+            </div>
+          </div>
+
+          {/* Shipping + payment column; collapsible on small screens via <details> */}
+          <div className="gg-col">
+            <details className="gg-glass gg-panel gg-details" open>
+              <summary className="gg-summary">Shipping Details</summary>
+              <div className="gg-details-content">
+                <ShippingDetails order={order} />
+              </div>
+            </details>
+
+            <details className="gg-glass gg-panel gg-details" open>
+              <summary className="gg-summary">Payment Details</summary>
+              <div className="gg-details-content">
+                <PaymentDetails order={order} />
+              </div>
+            </details>
+
+            <div className="gg-glass gg-panel gg-help">
+              <Help />
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   )

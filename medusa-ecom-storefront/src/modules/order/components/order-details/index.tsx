@@ -14,7 +14,7 @@ const OrderDetails = ({ order, showStatus }: OrderDetailsProps) => {
   }
 
   return (
-    <div>
+    <div className="text-white">
       <Text>
         We have sent the order confirmation details to{" "}
         <span

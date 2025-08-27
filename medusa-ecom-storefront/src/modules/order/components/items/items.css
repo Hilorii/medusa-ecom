@@ -1,0 +1,155 @@
+/* File: modules/order/components/items/items.css
+   Purpose: Glass-themed styling for Items component without Medusa UI Table.
+   Mobile-first, responsive, subtle glass background and spacing.
+*/
+
+:root {
+    --gg-item-bg: rgba(255, 255, 255, 0.06);
+    --gg-item-border: rgba(255, 255, 255, 0.18);
+    --gg-item-radius: 14px;
+    --gg-item-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.gg-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    color: #ffffff;
+}
+
+.gg-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Product item card */
+.gg-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    border-radius: var(--gg-item-radius);
+    background: var(--gg-item-bg);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--gg-item-border);
+    box-shadow: var(--gg-item-shadow);
+    padding: 0.75rem 1rem;
+}
+
+/* Image container */
+.gg-item-media {
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.gg-item-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Main info */
+.gg-item-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.gg-item-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--ui-fg-base, #ffffff);
+    margin: 0;
+}
+
+.gg-item-subtitle {
+    font-size: 0.8rem;
+    color: var(--ui-fg-muted, #ffffff);
+    margin-top: 0.25rem;
+}
+
+.gg-item-variant {
+    font-size: 0.75rem;
+    color: var(--ui-fg-subtle, #ffffff);
+    margin-top: 0.2rem;
+}
+
+/* Meta info (qty + prices) */
+.gg-item-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+}
+
+.gg-item-qty {
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.gg-item-price {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-size: 0.85rem;
+}
+
+.gg-item-unit {
+    font-size: 0.75rem;
+    color: var(--ui-fg-muted, #ffffff);
+}
+
+.gg-item-total {
+    font-weight: 600;
+}
+
+/* Skeleton loading state */
+.gg-item--skeleton {
+    animation: pulse 1.6s infinite ease-in-out;
+}
+
+.gg-skel {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+}
+
+.skel-thumb {
+    width: 64px;
+    height: 64px;
+}
+
+.skel-lines {
+    flex: 1;
+    height: 40px;
+    margin-left: 1rem;
+}
+
+.skel-meta {
+    width: 60px;
+    height: 24px;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .gg-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .gg-item-meta {
+        flex-direction: row;
+        justify-content: space-between;
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+}

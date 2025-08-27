@@ -29,15 +29,19 @@ export default function CheckoutLayout({
             className="txt-compact-xlarge-plus text-ui-fg-subtle hover:text-ui-fg-base uppercase"
             data-testid="store-link"
           >
-            Medusa Store
+            GLITCH GLOW
           </LocalizedClientLink>
           <div className="flex-1 basis-0" />
         </nav>
       </div>
-      <div className="relative" data-testid="checkout-container">{children}</div>
-      <div className="py-4 w-full flex items-center justify-center">
-        <MedusaCTA />
+      <div className="relative" data-testid="checkout-container">
+        {children}
       </div>
+
+      {/* These 2 icons from Medusa and Next.js on the bottom */}
+      {/*<div className="py-4 w-full flex items-center justify-center">*/}
+      {/*  <MedusaCTA />*/}
+      {/*</div>*/}
     </div>
   )
 }

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://example.com/gg-pricing.schema.json",
+  "currency": "EUR",
+  "sizes": {
+    "21x21": 59,
+    "36x14": 69,
+    "36x21": 89
+  },
+  "materials": {
+    "clear": 0,
+    "shadow": 5,
+    "aurora": 12,
+    "iridescent": 15,
+    "galaxy": 18
+  },
+  "colors": {
+    "black": 0,
+    "grey": 1,
+    "white": 1,
+    "red": 2,
+    "green": 2,
+    "blue": 3,
+    "brown": 1
+  },
+  "qty": {
+    "min": 1,
+    "max": 10
+  }
+}

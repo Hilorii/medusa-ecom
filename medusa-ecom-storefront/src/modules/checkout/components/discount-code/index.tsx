@@ -1,3 +1,9 @@
+// File: modules/cart/components/discount-code/index.tsx
+// Fixed types error (StoreCartPromotion vs StorePromotion) by using a PromotionLike
+// helper type that captures only the fields we actually need. Also ensures correct
+// money handling (Medusa uses MINOR UNITS) and keeps your gg-* class prefix.
+// All comments are in English.
+
 "use client"
 
 import { Badge, Heading, Input, Label, Text } from "@medusajs/ui"
@@ -14,63 +20,117 @@ import "./discount-code.css"
 
 type DiscountCodeProps = {
   cart: HttpTypes.StoreCart & {
-    promotions: HttpTypes.StorePromotion[]
+    promotions: HttpTypes.StorePromotion[] | HttpTypes.StoreCartPromotion[]
   }
+}
+
+/** Narrow helper type to avoid mismatch between StorePromotion and StoreCartPromotion */
+type PromotionLike = {
+  id: string
+  code?: string | null
+  is_automatic?: boolean | null
+  application_method?: {
+    type?: "percentage" | "fixed" | string
+    /** For percentage: a number like 10. For fixed: amount in MINOR UNITS. */
+    value?: number | string | null
+    /** Required when type === "fixed" */
+    currency_code?: string | null
+  } | null
 }
 
 const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const [isOpen, setIsOpen] = React.useState(false)
   const [message, formAction] = useActionState(submitPromotionForm, null)
 
-  const { promotions = [] } = cart
+  const promotions = (cart.promotions ?? []) as PromotionLike[]
 
+  // Remove a promotion code and apply the remaining codes
   const removePromotionCode = async (code: string) => {
-    const validPromotions = promotions.filter((p) => p.code !== code)
-    await applyPromotions(
-      validPromotions.filter((p) => p.code === undefined).map((p) => p.code!)
-    )
+    // Keep codes of other non-automatic promotions
+    const remainingCodes = promotions
+      .filter((p) => !!p.code && p.code !== code)
+      .map((p) => p.code!) // safe: filtered truthy
+    await applyPromotions(remainingCodes)
   }
 
+  // Add a new promotion code and re-apply
   const addPromotionCode = async (formData: FormData) => {
     const code = formData.get("code")
     if (!code) return
 
-    const input = document.getElementById("promotion-input") as HTMLInputElement
-    const codes = promotions
-      .filter((p) => p.code === undefined)
-      .map((p) => p.code!)
-    codes.push(code.toString())
+    const input = document.getElementById(
+      "promotion-input"
+    ) as HTMLInputElement | null
+    const codes = promotions.filter((p) => !!p.code).map((p) => p.code!)
+    codes.push(String(code))
 
     await applyPromotions(codes)
     if (input) input.value = ""
   }
 
+  /** Render the numeric/percentage value for a promotion in a safe, typed way */
+  const renderPromotionValue = (promotion: PromotionLike) => {
+    const am = promotion.application_method
+    if (!am) return null
+
+    if (am.type === "percentage") {
+      const pct =
+        typeof am.value === "number"
+          ? am.value
+          : Number.isFinite(Number(am.value))
+          ? Number(am.value)
+          : 0
+      return <>{pct}%</>
+    }
+
+    if (am.type === "fixed" && am.currency_code) {
+      // Medusa returns money amounts in MINOR UNITS (e.g., cents)
+      const minor =
+        typeof am.value === "number"
+          ? am.value
+          : Number.isFinite(Number(am.value))
+          ? Number(am.value)
+          : 0
+
+      return (
+        <>
+          {convertToLocale({
+            amount: minor,
+            currency_code: am.currency_code,
+          })}
+        </>
+      )
+    }
+
+    return null
+  }
+
   return (
-    <div className="rrc-coupon rrc-glass rrc-elevate">
-      {/* Nagłówek + toggle */}
-      <div className="rrc-coupon-head">
-        <Label htmlFor="promotion-input" className="rrc-coupon-label">
+    <div className="gg-coupon gg-glass gg-elevate">
+      {/* Header + toggle */}
+      <div className="gg-coupon-head">
+        <Label htmlFor="promotion-input" className="gg-coupon-label">
           Promotion code
         </Label>
 
         <button
           type="button"
           onClick={() => setIsOpen((v) => !v)}
-          className="rrc-coupon-toggle"
+          className="gg-coupon-toggle"
           data-testid="add-discount-button"
           aria-expanded={isOpen}
-          aria-controls="rrc-coupon-form"
+          aria-controls="gg-coupon-form"
         >
           {isOpen ? "Hide" : "Add code"}
         </button>
       </div>
 
-      {/* Formularz dodawania kodu */}
+      {/* Add code form */}
       {isOpen && (
         <form
-          id="rrc-coupon-form"
+          id="gg-coupon-form"
           action={(fd) => addPromotionCode(fd)}
-          className="rrc-coupon-form"
+          className="gg-coupon-form"
           noValidate
         >
           <Input
@@ -80,17 +140,17 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
             autoFocus={false}
             data-testid="discount-input"
             placeholder="Enter promo code"
-            className="rrc-input"
+            className="gg-input"
           />
           <SubmitButton
             variant="secondary"
             data-testid="discount-apply-button"
-            className="rrc-apply-btn"
+            className="gg-apply-btn"
           >
             Apply
           </SubmitButton>
 
-          <div className="rrc-coupon-error">
+          <div className="gg-coupon-error">
             <ErrorMessage
               error={message}
               data-testid="discount-error-message"
@@ -99,53 +159,51 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         </form>
       )}
 
-      {/* Lista zastosowanych promocji */}
+      {/* Applied promotions */}
       {promotions.length > 0 && (
-        <div className="rrc-promo-list-wrap">
-          <Heading className="rrc-promo-title">Promotion(s) applied</Heading>
+        <div className="gg-promo-list-wrap">
+          <Heading className="gg-promo-title">Promotion(s) applied</Heading>
 
-          <ul className="rrc-promo-list">
+          <ul className="gg-promo-list">
             {promotions.map((promotion) => {
+              const am = promotion.application_method
+
               const showValue =
-                promotion.application_method?.value !== undefined &&
-                promotion.application_method?.currency_code !== undefined
+                !!am &&
+                ((am.type === "percentage" &&
+                  am.value !== undefined &&
+                  am.value !== null) ||
+                  (am.type === "fixed" &&
+                    !!am.currency_code &&
+                    am.value !== undefined &&
+                    am.value !== null))
+
               return (
                 <li
                   key={promotion.id}
-                  className="rrc-promo-row"
+                  className="gg-promo-row"
                   data-testid="discount-row"
                 >
-                  <div className="rrc-promo-info">
+                  <div className="gg-promo-info">
                     <Badge
                       color={promotion.is_automatic ? "green" : "grey"}
                       size="small"
-                      className="rrc-badge"
+                      className="gg-badge"
                     >
-                      {promotion.code}
+                      {promotion.code ?? "automatic"}
                     </Badge>
 
                     {showValue && (
-                      <Text className="rrc-promo-amount" as="span">
-                        (
-                        {promotion.application_method!.type === "percentage"
-                          ? `${promotion.application_method!.value}%`
-                          : convertToLocale({
-                              amount: promotion.application_method!.value!,
-                              currency_code:
-                                promotion.application_method!.currency_code!,
-                            })}
-                        )
+                      <Text className="gg-promo-amount" as="span">
+                        ({renderPromotionValue(promotion)})
                       </Text>
                     )}
                   </div>
 
-                  {!promotion.is_automatic && (
+                  {!promotion.is_automatic && promotion.code && (
                     <button
-                      className="rrc-remove-btn"
-                      onClick={() => {
-                        if (!promotion.code) return
-                        removePromotionCode(promotion.code)
-                      }}
+                      className="gg-remove-btn"
+                      onClick={() => removePromotionCode(promotion.code!)}
                       data-testid="remove-discount-button"
                       aria-label="Remove discount code from order"
                       title="Remove"

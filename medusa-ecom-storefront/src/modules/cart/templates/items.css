@@ -1,17 +1,18 @@
-/* ----- GRID TABLE (zamiast @medusajs/ui/Table) ----- */
-
+/* ===== GRID TABLE WRAPPER ===== */
 .rrc-grid-wrap {
     overflow: hidden;
-    border-radius: 16px;
+    border-radius: 18px;
     border: 1px solid rgba(255,255,255,0.35);
-    /* Tu możesz ustawić dowolne tło, także w pełni transparentne */
-    background: rgba(255,255,255,0.0);
+    background: rgba(255,255,255,0.0); /* może być 100% transparent */
+    padding: 2px; /* lekkie wewnętrzne marginesy */
 }
 
+/* Head & Row baseline grid (desktop) */
 .rrc-grid-head,
 .rrc-row {
     display: grid;
-    grid-template-columns: 96px 1fr 190px 160px 160px; /* thumb | details | qty | unit | total */
+    /* thumb | details | qty | unit | total */
+    grid-template-columns: 104px 1fr 180px 140px 150px;
     align-items: center;
     gap: 0;
 }
@@ -20,8 +21,8 @@
     position: sticky;
     top: 0;
     z-index: 1;
-    padding: 12px 12px 10px 0;
-    background: linear-gradient(180deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1)); /* subtelny półprzezroczysty header */
+    padding: 14px 16px 12px 4px; /* odrobinkę większe L/R */
+    background: linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0.1));
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
 }
@@ -31,17 +32,19 @@
     color: rgba(0,0,0,0.55);
     font-size: 0.95rem;
 }
+.rrc-qty-head { text-align: left; }
 .rrc-cell-left { padding-left: 0 !important; }
 .rrc-cell-right { padding-right: 0 !important; }
 .rrc-text-right { text-align: right; }
 
 .rrc-grid-body { display: block; }
 
+/* Skeleton row */
 .rrc-skel-row {
-    height: 72px;
-    margin: 6px 0;
+    height: 78px;
+    margin: 8px 6px;
     border-radius: 12px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.25), rgba(255,255,255,0.15));
+    background: linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.26), rgba(255,255,255,0.15));
     background-size: 200% 100%;
     animation: rrc-shimmer 1.6s infinite;
 }
@@ -50,16 +53,16 @@
     100% { background-position: -200% 0; }
 }
 
-/* kolumny – stałe szerokości jak wcześniej */
-.rrc-col-qty { width: 190px; }
-.rrc-col-price { width: 160px; }
-.rrc-col-total { width: 160px; }
+/* Column nominal widths (desktop) */
+.rrc-col-qty { width: 180px; }
+.rrc-col-price { width: 140px; }
+.rrc-col-total { width: 150px; }
 
-/* tytuł/separatory powyżej */
-.rrc-header { padding-bottom: 8px; display: flex; align-items: center; }
+/* Title / spacing above */
+.rrc-header { padding-bottom: 10px; display: flex; align-items: center; }
 .rrc-title { font-size: 2rem !important; line-height: 2.6rem !important; }
 
-/* glass utils (jak wcześniej) */
+/* Glass utils */
 .rrc-glass {
     backdrop-filter: blur(10px) saturate(120%);
     -webkit-backdrop-filter: blur(10px) saturate(120%);
@@ -70,30 +73,47 @@
 }
 .rrc-elevate:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(0,0,0,0.10); }
 
-/* RESPONSIVE */
-@media (max-width: 640px) {
+/* ===== RESPONSIVE BREAKPOINTS ===== */
+
+/* <= 1024px: ciut ciaśniej na prawa kolumna, więcej miejsca na tytuł */
+@media (max-width: 1024px) {
+    .rrc-grid-head,
+    .rrc-row {
+        grid-template-columns: 96px 1fr 170px 120px 140px;
+    }
+    .rrc-grid-head { padding: 12px 14px 10px 4px; }
+}
+
+/* <= 768px: chowamy 'Price'; przesuwamy Quantity bardziej na prawo */
+@media (max-width: 768px) {
     .rrc-hide-small { display: none !important; }
     .rrc-grid-head,
     .rrc-row {
-        grid-template-columns: 64px 1fr 160px 0px 120px; /* unit price znika, total mniejszy */
+        /* thumb | details | qty | total (4 kolumny) */
+        grid-template-columns: 88px 1fr 170px 140px;
     }
+    .rrc-qty-head { text-align: right; }
 }
 
-/* ===== EXTRA RESPONSIVE FOR VERY NARROW PHONES ===== */
-@media (max-width: 480px) {
-    .rrc-grid-head,
+/* <= 560px: Quantity idzie pod nazwę, po PRAWEJ; Total osobno po prawej */
+@media (max-width: 560px) {
+    .rrc-grid-head { display: none; } /* head znika – mobilny układ kart */
+    .rrc-grid-wrap { padding: 0; }
+
     .rrc-row {
-        grid-template-columns: 56px 1fr 150px 0px 110px; /* jeszcze ciaśniej */
+        /* thumb | details | total */
+        grid-template-columns: 72px 1fr 120px;
+        row-gap: 6px;
+        padding: 12px 16px 12px 6px; /* większy L/R */
+        border-radius: 14px;
+        margin: 6px 4px;
     }
-    .rrc-col-qty { width: 150px; }
-    .rrc-col-total { width: 110px; }
 }
 
+/* <= 380px: jeszcze węziej, ale wciąż czytelnie */
 @media (max-width: 380px) {
-    .rrc-grid-head,
     .rrc-row {
-        grid-template-columns: 52px 1fr 140px 0px 100px;
+        grid-template-columns: 64px 1fr 108px;
+        padding: 12px 14px 12px 6px;
     }
-    .rrc-col-qty { width: 140px; }
-    .rrc-col-total { width: 100px; }
 }

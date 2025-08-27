@@ -3,7 +3,6 @@ import { HttpTypes } from "@medusajs/types"
 import { Heading } from "@medusajs/ui"
 
 import Item from "@modules/cart/components/item"
-
 import "./items.css"
 
 type ItemsTemplateProps = {
@@ -19,7 +18,6 @@ const ItemsTemplate = ({ cart }: ItemsTemplateProps) => {
         <Heading className="rrc-title">Cart</Heading>
       </div>
 
-      {/* Własna „tabela” w CSS Grid – pełna kontrola tła */}
       <div
         className="rrc-grid-wrap rrc-glass rrc-elevate"
         data-testid="items-table"
@@ -27,7 +25,7 @@ const ItemsTemplate = ({ cart }: ItemsTemplateProps) => {
         <div className="rrc-grid-head" role="row">
           <div className="rrc-hcell rrc-cell-left">Item</div>
           <div className="rrc-hcell" />
-          <div className="rrc-hcell rrc-col-qty">Quantity</div>
+          <div className="rrc-hcell rrc-col-qty rrc-qty-head">Quantity</div>
           <div className="rrc-hcell rrc-hide-small rrc-col-price">Price</div>
           <div className="rrc-hcell rrc-cell-right rrc-text-right rrc-col-total">
             Total

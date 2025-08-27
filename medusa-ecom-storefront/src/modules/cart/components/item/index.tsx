@@ -30,16 +30,9 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
     setError(null)
     setUpdating(true)
 
-    await updateLineItem({
-      lineId: item.id,
-      quantity,
-    })
-      .catch((err) => {
-        setError(err.message)
-      })
-      .finally(() => {
-        setUpdating(false)
-      })
+    await updateLineItem({ lineId: item.id, quantity })
+      .catch((err) => setError(err.message))
+      .finally(() => setUpdating(false))
   }
 
   const maxQtyFromInventory = 10

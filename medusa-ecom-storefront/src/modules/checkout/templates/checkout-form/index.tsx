@@ -33,8 +33,7 @@ export default async function CheckoutForm({
 
       <Payment cart={cart} availablePaymentMethods={paymentMethods} />
 
-      {/* Not sure how does it work. If it works... */}
-      {/*<Review cart={cart} />*/}
+      <Review cart={cart} />
     </div>
   )
 }

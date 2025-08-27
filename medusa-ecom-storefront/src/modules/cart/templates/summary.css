@@ -1,62 +1,15 @@
+/* ===== SUMMARY PANEL (glass) ===== */
+
 .rrc-summary {
     display: flex;
     flex-direction: column;
     gap: 16px;
     padding: 20px;
-}
-
-.rrc-summary-title {
-    font-size: 2rem !important;
-    line-height: 2.6rem !important;
-}
-
-.rrc-divider {
-    height: 1px;
-    width: 100%;
-    background: linear-gradient(90deg, transparent, rgba(0,0,0,.15), transparent);
-}
-
-/* checkout CTA */
-.rrc-cta {
-    width: 100%;
-    height: 44px;
-    border-radius: 12px !important;
-    transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
-}
-.rrc-cta:hover { transform: translateY(-1px); }
-
-/* coupon container (styling wnętrza nie zmienia logiki DiscountCode) */
-.rrc-coupon {
-    border: 1px dashed rgba(16,185,129,0.35);
-    padding: 12px;
     border-radius: 16px;
-    background: rgba(236,253,245,0.35);
-}
-.rrc-coupon input[type="text"],
-.rrc-coupon input:not([type]),
-.rrc-coupon .field,
-.rrc-coupon .input,
-.rrc-coupon .TextInput,
-.rrc-coupon .medusa-input { /* defensywnie pod różne klasy */
-    height: 44px;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.7);
-    border: 1px solid rgba(0,0,0,0.12);
-    padding: 0 12px;
-    outline: none;
-}
-.rrc-coupon button {
-    height: 44px;
-    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.35);
 }
 
-/* totals container – lekko separujemy od tła */
-.rrc-totals {
-    padding: 4px 0;
-    font-variant-numeric: tabular-nums;
-}
-
-/* glass utils (powielone tu dla niezależności importu) */
+/* glass utils — spójne z resztą */
 .rrc-glass {
     background: rgba(255,255,255,0.45);
     backdrop-filter: blur(10px) saturate(120%);
@@ -67,3 +20,109 @@
     transition: transform .2s ease, box-shadow .2s ease;
 }
 .rrc-elevate:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(0,0,0,0.10); }
+
+.rrc-summary-head { display: flex; align-items: center; justify-content: space-between; }
+.rrc-summary-title { font-size: 2rem !important; line-height: 2.6rem !important; }
+
+.rrc-divider {
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0,0,0,.15), transparent);
+}
+
+/* ===== COUPON BAR (override wyglądu DiscountCode bez zmiany logiki) ===== */
+
+.rrc-coupon {
+    border: 1px dashed rgba(16,185,129,0.35);
+    border-radius: 16px;
+    padding: 12px;
+    background: rgba(236,253,245,0.35);
+}
+
+/* Pola i przyciski wewnątrz DiscountCode — selektory defensywne */
+.rrc-coupon input[type="text"],
+.rrc-coupon input:not([type]),
+.rrc-coupon .field,
+.rrc-coupon .input,
+.rrc-coupon .TextInput,
+.rrc-coupon .medusa-input {
+    height: 44px !important;
+    border-radius: 12px !important;
+    background: rgba(255,255,255,0.7) !important;
+    border: 1px solid rgba(0,0,0,0.12) !important;
+    padding: 0 12px !important;
+    outline: none !important;
+    width: 100%;
+}
+.rrc-coupon button {
+    height: 44px !important;
+    border-radius: 12px !important;
+}
+
+/* Jeżeli DiscountCode używa layoutu z dwoma elementami obok siebie,
+   dopnij elastyczny układ z przerwami i zawijaniem na mobile */
+.rrc-coupon form,
+.rrc-coupon .coupon-form,
+.rrc-coupon .discount-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* ===== TOTALS ===== */
+
+.rrc-totals {
+    padding: 4px 0;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Wiele implementacji CartTotals renderuje DL albo listę wierszy:
+   dodajemy tylko zachowanie spacing/align – bez twardych selektorów „niszczących” wnętrze */
+.rrc-totals dl,
+.rrc-totals .rows,
+.rrc-totals .list {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    row-gap: 8px;
+}
+
+/* ===== CTA ===== */
+.rrc-cta-link { display: block; }
+.rrc-cta {
+    width: 100%;
+    height: 44px;
+    border-radius: 12px !important;
+    transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+}
+.rrc-cta:hover { transform: translateY(-1px); }
+
+/* Footnote */
+.rrc-footnote {
+    margin-top: 2px;
+    font-size: 12px;
+    color: rgba(0,0,0,0.55);
+}
+
+/* ===== RESPONSIVE ===== */
+
+@media (max-width: 1024px) {
+    .rrc-summary { padding: 16px; }
+}
+
+@media (max-width: 640px) {
+    .rrc-summary-title { font-size: 1.5rem !important; line-height: 2rem !important; }
+    .rrc-coupon { padding: 10px; }
+    .rrc-cta { height: 42px; }
+    .rrc-footnote { font-size: 11px; }
+}
+
+/* ultra small phones */
+@media (max-width: 380px) {
+    .rrc-summary { padding: 12px; }
+    .rrc-coupon form,
+    .rrc-coupon .coupon-form,
+    .rrc-coupon .discount-form {
+        gap: 6px;
+    }
+}

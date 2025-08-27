@@ -29,30 +29,40 @@ const Summary = ({ cart }: SummaryProps) => {
   const step = getCheckoutStep(cart)
 
   return (
-    <div className="rrc-summary">
-      <Heading level="h2" className="rrc-summary-title">
-        Summary
-      </Heading>
+    <section
+      className="rrc-summary rrc-glass rrc-elevate"
+      aria-label="Order summary"
+    >
+      <header className="rrc-summary-head">
+        <Heading level="h2" className="rrc-summary-title">
+          Summary
+        </Heading>
+      </header>
 
-      {/* Kupon w „glass” z dashed border */}
-      <div className="rrc-coupon rrc-glass rrc-elevate">
+      {/* Belka kuponu — nie zmieniamy logiki DiscountCode, tylko wygląd i layout */}
+      <div className="rrc-coupon" aria-label="Promotion code">
         <DiscountCode cart={cart} />
       </div>
 
       <div className="rrc-divider" />
 
-      {/* Totals – zostawiamy logikę, dopieszczamy wygląd kontenera */}
-      <div className="rrc-totals">
+      <div className="rrc-totals" aria-label="Totals">
         <CartTotals totals={cart} />
       </div>
 
       <LocalizedClientLink
         href={"/checkout?step=" + step}
         data-testid="checkout-button"
+        className="rrc-cta-link"
       >
         <Button className="rrc-cta">Go to checkout</Button>
       </LocalizedClientLink>
-    </div>
+
+      {/* Sekcja „info” opcjonalnie — lekki hint o bezpieczeństwie / wysyłce */}
+      <p className="rrc-footnote">
+        Secure checkout • Free returns within 30 days
+      </p>
+    </section>
   )
 }
 

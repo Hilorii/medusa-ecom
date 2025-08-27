@@ -78,3 +78,22 @@
         grid-template-columns: 64px 1fr 160px 0px 120px; /* unit price znika, total mniejszy */
     }
 }
+
+/* ===== EXTRA RESPONSIVE FOR VERY NARROW PHONES ===== */
+@media (max-width: 480px) {
+    .rrc-grid-head,
+    .rrc-row {
+        grid-template-columns: 56px 1fr 150px 0px 110px; /* jeszcze ciaśniej */
+    }
+    .rrc-col-qty { width: 150px; }
+    .rrc-col-total { width: 110px; }
+}
+
+@media (max-width: 380px) {
+    .rrc-grid-head,
+    .rrc-row {
+        grid-template-columns: 52px 1fr 140px 0px 100px;
+    }
+    .rrc-col-qty { width: 140px; }
+    .rrc-col-total { width: 100px; }
+}

@@ -19,18 +19,18 @@
 }
 
 /* Head: label + toggle */
-.rrc-coupon-head {
+.gg-coupon-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
     margin-bottom: 8px;
 }
-.rrc-coupon-label {
+.gg-coupon-label {
     font-weight: 600 !important;
     color: #303030 !important;
 }
-.rrc-coupon-toggle {
+.gg-coupon-toggle {
     background: transparent;
     border: 0;
     padding: 6px 10px;
@@ -40,22 +40,22 @@
     color: #454545;
     transition: background .15s ease, transform .15s ease;
 }
-.rrc-coupon-toggle:hover {
+.gg-coupon-toggle:hover {
     background: rgba(5, 150, 105, 0.08);
     transform: translateY(-1px);
 }
 
 /* Form */
-.rrc-coupon-form {
+.gg-coupon-form {
     display: flex;
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
 }
-.rrc-input,
-.rrc-coupon input[type="text"],
-.rrc-coupon input:not([type]),
-.rrc-coupon .medusa-input {
+.gg-input,
+.gg-coupon input[type="text"],
+.gg-coupon input:not([type]),
+.gg-coupon .medusa-input {
     height: 44px !important;
     border-radius: 12px !important;
     background: rgba(255,255,255,0.7) !important;
@@ -64,21 +64,21 @@
     outline: none !important;
     width: 100%;
 }
-.rrc-apply-btn {
+.gg-apply-btn {
     height: 44px !important;
     border-radius: 12px !important;
     padding: 0 14px !important;
 }
 
 /* Error */
-.rrc-coupon-error { width: 100%; }
+.gg-coupon-error { width: 100%; }
 
 /* Applied list */
-.rrc-promo-list-wrap { margin-top: 8px; }
-.rrc-promo-title { font-size: 0.95rem !important; margin-bottom: 6px; }
+.gg-promo-list-wrap { margin-top: 8px; }
+.gg-promo-title { font-size: 0.95rem !important; margin-bottom: 6px; }
 
-.rrc-promo-list { list-style: none; margin: 0; padding: 0; }
-.rrc-promo-row {
+.gg-promo-list { list-style: none; margin: 0; padding: 0; }
+.gg-promo-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -87,13 +87,13 @@
     border-radius: 10px;
     transition: background .15s ease;
 }
-.rrc-promo-row:hover { background: rgba(255,255,255,0.35); }
+.gg-promo-row:hover { background: rgba(255,255,255,0.35); }
 
-.rrc-promo-info { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-.rrc-badge { white-space: nowrap; }
-.rrc-promo-amount { color: rgba(0,0,0,0.65); white-space: nowrap; }
+.gg-promo-info { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.gg-badge { white-space: nowrap; }
+.gg-promo-amount { color: rgba(0,0,0,0.65); white-space: nowrap; }
 
-.rrc-remove-btn {
+.gg-remove-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -104,15 +104,15 @@
     cursor: pointer;
     transition: background .15s ease, transform .15s ease;
 }
-.rrc-remove-btn:hover { background: rgba(239, 68, 68, 0.10); transform: translateY(-1px); }
+.gg-remove-btn:hover { background: rgba(239, 68, 68, 0.10); transform: translateY(-1px); }
 
 /* ===== Responsiveness ===== */
 @media (max-width: 640px) {
-    .rrc-coupon { padding: 12px; }
-    .rrc-coupon-label { font-size: 0.95rem !important; }
-    .rrc-apply-btn { width: auto; }
+    .gg-coupon { padding: 12px; }
+    .gg-coupon-label { font-size: 0.95rem !important; }
+    .gg-apply-btn { width: auto; }
 }
 @media (max-width: 380px) {
-    .rrc-coupon { padding: 10px; }
-    .rrc-coupon-form { gap: 6px; }
+    .gg-coupon { padding: 10px; }
+    .gg-coupon-form { gap: 6px; }
 }

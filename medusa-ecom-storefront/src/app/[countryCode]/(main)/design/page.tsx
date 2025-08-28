@@ -4,15 +4,113 @@ import React, { useEffect, useMemo, useState } from "react"
 import "./design.css"
 
 /**
- * Product configurator:
- * - Single source of truth in CONFIG (sizes, finishes, colors, rules, prices)
- * - Incompatibility rules (e.g., flavor X can't be combined with color Y)
- * - LIVE preview with dynamic aspect ratio based on size
- * - Persistence in localStorage
- * - Clear comments (kept mostly in Polish for context)
+ * This page integrates the configurator with the Medusa backend.
+ * It uses:
+ * - GET  /store/designs/config   -> to render options & base prices
+ * - POST /store/designs/price    -> to show live pricing
+ * - POST /store/designs/upload   -> to upload the artwork (base64)
+ * - POST /store/designs/add      -> to add the configured item to cart
+ * - POST /api/gg/cart/set        -> to persist cart_id cookie in Next (server)
+ *
+ * Notes:
+ * - "flavor" here maps to "material" in the backend
+ * - "artwork" in the UI maps to fileName/fileUrl in the backend
  */
 
-/** Types */
+// ---------- Tiny client helpers (kept inline to avoid extra files) ----------
+
+// Configure your Medusa URL & publishable key via .env.local
+const BASE = process.env.NEXT_PUBLIC_MEDUSA_URL || "http://localhost:9000"
+const PK = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+
+async function jfetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      "x-publishable-api-key": PK || "",
+      ...(init?.headers || {}),
+    },
+    cache: "no-store",
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => "")
+    throw new Error(`Request failed ${res.status}: ${text || res.statusText}`)
+  }
+  return res.json()
+}
+
+function getDesignConfig() {
+  return jfetch<{
+    currency: "EUR"
+    qty: { min: number; max: number }
+    options: {
+      size: { id: string; label: string; price_eur: number }[]
+      material: { id: string; label: string; surcharge_eur: number }[]
+      color: { id: string; label: string; surcharge_eur: number }[]
+    }
+  }>("/store/designs/config")
+}
+
+function previewPrice(body: {
+  size: string
+  material: string
+  color: string
+  qty?: number
+}) {
+  return jfetch<{
+    currency: "EUR"
+    unit_price: number
+    subtotal: number
+    qty: number
+    breakdown: {
+      base_eur: number
+      material_eur: number
+      color_eur: number
+      total_eur: number
+    }
+  }>("/store/designs/price", { method: "POST", body: JSON.stringify(body) })
+}
+
+function uploadArtwork(body: {
+  file_base64: string
+  originalName: string
+  cartId?: string
+}) {
+  return jfetch<{
+    fileUrl: string
+    fileName: string
+    bytes: number
+    mime: string
+  }>("/store/designs/upload", { method: "POST", body: JSON.stringify(body) })
+}
+
+function addDesignToCart(body: {
+  size: string
+  material: string
+  color: string
+  qty?: number
+  fileName?: string
+  fileUrl?: string
+}) {
+  return jfetch<any>("/store/designs/add", {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
+}
+
+/** Call Next server API to set the cart cookie so server actions see the same cart. */
+async function setCartCookie(cartId: string) {
+  const res = await fetch("/api/gg/cart/set", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ cart_id: cartId }),
+  })
+  if (!res.ok) throw new Error("Failed to set cart cookie")
+}
+
+// ----------------------------- Types ---------------------------------------
+
 type StepId = "size" | "artwork" | "flavor" | "color" | "summary"
 
 type Artwork =
@@ -26,7 +124,7 @@ type Artwork =
 type Selections = {
   art?: Artwork
   size?: string
-  flavor?: string
+  flavor?: string // maps to backend "material"
   color?: string
 }
 
@@ -35,95 +133,22 @@ type SizeDef = OptionCommon & { wCm: number; hCm: number; basePrice: number }
 type FlavorDef = OptionCommon & { priceDelta: number; intensity?: number }
 type ColorDef = OptionCommon & { swatch: string; hue: number }
 
-/**
- * CONFIG — tu edytujesz warianty, ceny i reguły.
- * - Dodaj rozmiar: CONFIG.sizes
- * - Dodaj flavor: CONFIG.flavors
- * - Dodaj kolor: CONFIG.colors
- * - Dodaj regułę kompatybilności: CONFIG.rules
- */
-const CONFIG = {
-  currency: "€",
-
-  /** Sizes control price and aspect ratio in preview */
-  sizes: {
-    s21x21: {
-      id: "s21x21",
-      label: "21 × 21 cm",
-      wCm: 21,
-      hCm: 21,
-      basePrice: 59,
-    },
-    s36x14: {
-      id: "s36x14",
-      label: "36 × 14 cm",
-      wCm: 36,
-      hCm: 14,
-      basePrice: 69,
-    },
-    s36x21: {
-      id: "s36x21",
-      label: "36 × 21 cm",
-      wCm: 36,
-      hCm: 21,
-      basePrice: 89,
-    },
-  } satisfies Record<string, SizeDef>,
-
-  /** Flavors (finishes) modify the effect and can change glow intensity */
-  flavors: {
-    clear: { id: "clear", label: "Clear", priceDelta: 0, intensity: 0.55 },
-    shadow: { id: "shadow", label: "Shadow", priceDelta: 5, intensity: 0.45 },
-    aurora: { id: "aurora", label: "Aurora", priceDelta: 12, intensity: 0.75 },
-    iridescent: {
-      id: "iridescent",
-      label: "Iridescent",
-      priceDelta: 15,
-      intensity: 0.85,
-    },
-    galaxy: { id: "galaxy", label: "Galaxy", priceDelta: 18, intensity: 1.0 },
-  } satisfies Record<string, FlavorDef>,
-
-  /** Colors define the LED accent (swatch + hue for CSS glow) */
-  colors: {
-    black: { id: "black", label: "Black", swatch: "#0b0b0c", hue: 270 },
-    grey: { id: "grey", label: "Grey", swatch: "#8e9aa6", hue: 220 },
-    white: { id: "white", label: "White", swatch: "#fafafa", hue: 0 },
-    red: { id: "red", label: "Red", swatch: "#ff3b58", hue: 350 },
-    green: { id: "green", label: "Green", swatch: "#31d67b", hue: 140 },
-    blue: { id: "blue", label: "Blue", swatch: "#2fa7ff", hue: 205 },
-    brown: { id: "brown", label: "Brown", swatch: "#7b4b2a", hue: 25 },
-  } satisfies Record<string, ColorDef>,
-
-  /**
-   * Compatibility rules:
-   * Each rule: when <facet=value> then disallow <otherFacet=[values...]>
-   */
-  rules: [
-    { when: { flavor: "galaxy" }, disallow: { color: ["white"] } },
-    { when: { color: "white" }, disallow: { flavor: ["galaxy"] } },
-  ] as const,
-
-  /** Wizard steps (labels; options are rendered from maps) */
-  steps: [
-    { id: "size" as StepId, title: "Size" },
-    { id: "artwork" as StepId, title: "Artwork" },
-    { id: "flavor" as StepId, title: "Finish" },
-    { id: "color" as StepId, title: "Color" },
-    { id: "summary" as StepId, title: "Summary" },
-  ],
-} as const
+// --------------------------- Local helpers ---------------------------------
 
 const STORAGE_KEY = "design-your-own-v4"
 
-/** Utility: join classes */
 function cx(...c: (string | false | undefined)[]) {
   return c.filter(Boolean).join(" ")
 }
 
-/** Is the option disabled by rules? */
-function isOptionDisabled(stepId: StepId, optionId: string, sel: Selections) {
-  for (const rule of CONFIG.rules) {
+/** Check if option is disabled by simple local rules (kept from your UI). */
+function isOptionDisabled(
+  stepId: StepId,
+  optionId: string,
+  sel: Selections,
+  rules: any[]
+) {
+  for (const rule of rules) {
     const whenKey = Object.keys(rule.when)[0] as keyof typeof rule.when
     const whenVal = (rule.when as any)[whenKey]
     const matches =
@@ -140,12 +165,106 @@ function isOptionDisabled(stepId: StepId, optionId: string, sel: Selections) {
   return false
 }
 
+// ------------------------------ Component ----------------------------------
+
 export default function DesignPage() {
+  // Config fetched from backend
+  const [currency, setCurrency] = useState<"€" | "EUR">("€")
+  const [sizes, setSizes] = useState<Record<string, SizeDef>>({})
+  const [flavors, setFlavors] = useState<Record<string, FlavorDef>>({})
+  const [colors, setColors] = useState<Record<string, ColorDef>>({})
+
+  // Keep your simple demo rules for now (can be extended from backend later)
+  const [rules] = useState([
+    { when: { flavor: "galaxy" }, disallow: { color: ["white"] } },
+    { when: { color: "white" }, disallow: { flavor: ["galaxy"] } },
+  ])
+
   const [active, setActive] = useState<StepId>("size")
   const [sel, setSel] = useState<Selections>({})
   const [artError, setArtError] = useState<string | null>(null)
 
-  /** Load/save selections */
+  // Load config once
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const cfg = await getDesignConfig()
+        setCurrency(cfg.currency === "EUR" ? "€" : (cfg.currency as any))
+
+        // sizes
+        const sizeMap: Record<string, SizeDef> = {}
+        cfg.options.size.forEach((s) => {
+          // Try to parse width/height from id like "21x21"
+          const [w, h] = s.id.split("x")
+          sizeMap[`s${s.id}`] = {
+            id: `s${s.id}`, // keep local ids prefixed with 's' to match your UI
+            label: s.label || s.id.replace("x", " × "),
+            wCm: Number(w) || 16,
+            hCm: Number(h) || 9,
+            basePrice: s.price_eur,
+          }
+        })
+        setSizes(sizeMap)
+
+        // flavors (materials)
+        const flMap: Record<string, FlavorDef> = {}
+        cfg.options.material.forEach((m) => {
+          flMap[m.id] = {
+            id: m.id,
+            label: m.label,
+            priceDelta: m.surcharge_eur,
+            // Simple visual intensity mapping for the glow
+            intensity:
+              m.id === "shadow" ? 0.45 : m.id === "galaxy" ? 1.0 : 0.55,
+          }
+        })
+        setFlavors(flMap)
+
+        // colors
+        const colMap: Record<string, ColorDef> = {}
+        cfg.options.color.forEach((c) => {
+          colMap[c.id] = {
+            id: c.id,
+            label: c.label,
+            // Simple default swatches/hues (can be themed later)
+            swatch:
+              c.id === "black"
+                ? "#0b0b0c"
+                : c.id === "white"
+                ? "#fafafa"
+                : c.id === "grey"
+                ? "#8e9aa6"
+                : c.id === "green"
+                ? "#31d67b"
+                : c.id === "red"
+                ? "#ff3b58"
+                : c.id === "brown"
+                ? "#7b4b2a"
+                : "#2fa7ff",
+            hue:
+              c.id === "blue"
+                ? 205
+                : c.id === "green"
+                ? 140
+                : c.id === "red"
+                ? 350
+                : c.id === "grey"
+                ? 220
+                : c.id === "brown"
+                ? 25
+                : c.id === "white"
+                ? 0
+                : 270,
+          }
+        })
+        setColors(colMap)
+      } catch (e) {
+        console.error("Failed to load design config", e)
+      }
+    })()
+  }, [])
+
+  // Persist selections locally
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
@@ -158,20 +277,40 @@ export default function DesignPage() {
     } catch {}
   }, [sel])
 
+  // Selected objects
   // @ts-ignore
-  const size = sel.size ? CONFIG.sizes[sel.size] : undefined
+  const size = sel.size ? sizes[sel.size] : undefined
   // @ts-ignore
-  const flavor = sel.flavor ? CONFIG.flavors[sel.flavor] : undefined
+  const flavor = sel.flavor ? flavors[sel.flavor] : undefined
   // @ts-ignore
-  const color = sel.color ? CONFIG.colors[sel.color] : undefined
+  const color = sel.color ? colors[sel.color] : undefined
 
-  /** Price = base (from size) + finish delta */
-  const price = useMemo(() => {
-    const base = size?.basePrice ?? 0
-    const flavorDelta = flavor?.priceDelta ?? 0
-    return base + flavorDelta
-  }, [size, flavor])
+  // Live price from backend
+  const [livePriceEur, setLivePriceEur] = useState<number>(0)
+  useEffect(() => {
+    ;(async () => {
+      if (!size || !flavor || !color) {
+        setLivePriceEur(0)
+        return
+      }
+      try {
+        // Backend expects sizes like "21x21" (no 's' prefix)
+        const backendSize = size.id.replace(/^s/, "")
+        const p = await previewPrice({
+          size: backendSize,
+          material: flavor.id,
+          color: color.id,
+          qty: 1,
+        })
+        setLivePriceEur(Math.round(p.breakdown.total_eur))
+      } catch {
+        // Fallback: base + delta if preview endpoint fails
+        setLivePriceEur((size?.basePrice || 0) + (flavor?.priceDelta || 0))
+      }
+    })()
+  }, [size?.id, flavor?.id, color?.id])
 
+  // UI controls
   const order: StepId[] = ["size", "artwork", "flavor", "color", "summary"]
   const canNext =
     (active === "size" && !!sel.size) ||
@@ -184,14 +323,9 @@ export default function DesignPage() {
     setActive(order[Math.min(order.length - 1, order.indexOf(active) + 1)])
   const goPrev = () => setActive(order[Math.max(0, order.indexOf(active) - 1)])
 
-  /**
-   * CSS vars for preview:
-   * - --dy-hue from selected color (fallback = Blue)
-   * - --dy-intensity from finish (fallback = .55)
-   * - --dy-aspect as string "w / h" (fallback = "16 / 9")
-   */
+  // CSS vars for preview
   const previewVars: React.CSSProperties = useMemo(() => {
-    const hue = color?.hue ?? CONFIG.colors.blue.hue
+    const hue = color?.hue ?? 205
     const intensity = flavor?.intensity ?? 0.55
     const aspect = size ? `${size.wCm} / ${size.hCm}` : "16 / 9"
     return {
@@ -201,44 +335,26 @@ export default function DesignPage() {
     }
   }, [size, flavor, color])
 
-  /** Update selections */
+  // Update selection helpers
   function pick(step: "flavor" | "color", value: string) {
     setSel((prev) => ({ ...prev, [step]: value }))
   }
-
-  /** Pick size (doesn't clear artwork) */
   function pickSize(nextId: string) {
     setSel((prev) => ({ ...prev, size: nextId }))
   }
-
-  /** Reset */
   function resetAll() {
     setSel({})
     setActive("size")
     setArtError(null)
   }
 
-  /** Demo "Add to cart" */
-  async function addToCart() {
-    alert(
-      `Added to cart:\n${JSON.stringify(
-        {
-          ...sel,
-          total: { price, currency: CONFIG.currency },
-        },
-        null,
-        2
-      )}`
-    )
-  }
-
-  // --- ARTWORK HANDLING (step 2) ---
+  // Artwork handling
   const ACCEPT = ".png,.jpg,.jpeg,.webp"
   const MAX_MB = 6
 
   function onPickExample(name: "example1.png" | "example2.png") {
     setArtError(null)
-    const url = `/${name}` // files in /public
+    const url = `/${name}` // stored in /public
     setSel((prev) => ({
       ...prev,
       art: { source: "example", name, dataUrl: url },
@@ -275,24 +391,80 @@ export default function DesignPage() {
     reader.readAsDataURL(file)
   }
 
-  /** Render helpers */
-  const sizeOptions = Object.values(CONFIG.sizes)
-  const flavorOptions = Object.values(CONFIG.flavors)
-  const colorOptions = Object.values(CONFIG.colors)
+  // Add to cart flow
+  const [adding, setAdding] = useState(false)
+  async function addToCart() {
+    if (!size || !flavor || !color || !sel.art) return
+    setAdding(true)
+    try {
+      // 1) Upload artwork if user provided a file
+      let fileUrl: string | undefined
+      let fileName: string | undefined
 
-  /** Progress (4 “blocking” steps: size, artwork, flavor, color) */
+      if (sel.art.source === "upload") {
+        const up = await uploadArtwork({
+          file_base64: sel.art.dataUrl,
+          originalName: sel.art.name,
+        })
+        fileUrl = up.fileUrl
+        fileName = up.fileName
+      } else {
+        // Example asset, you may or may not upload; we just pass the URL for now
+        fileUrl = sel.art.dataUrl
+        fileName = sel.art.name
+      }
+
+      // 2) Call /store/designs/add to create or reuse a cart and add the line item
+      const cart = await addDesignToCart({
+        size: size.id.replace(/^s/, ""), // "s21x21" -> "21x21"
+        material: flavor.id, // flavor maps to backend "material"
+        color: color.id,
+        qty: 1,
+        fileName,
+        fileUrl,
+      })
+
+      // 3) Extract cart id and set cookie via Next API
+      const cartId = cart?.id || cart?.cart?.id || cart?.data?.id
+      if (cartId) {
+        await setCartCookie(cartId)
+      }
+
+      alert("Added to cart ✅")
+      // Optionally: navigate to cart page
+      // router.push("/cart")
+    } catch (e: any) {
+      alert(`Failed: ${e?.message || "Error adding to cart"}`)
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  // Options for rendering
+  const sizeOptions = Object.values(sizes)
+  const flavorOptions = Object.values(flavors)
+  const colorOptions = Object.values(colors)
+
   const doneCount =
     Number(!!sel.size) +
     Number(!!sel.art) +
     Number(!!sel.flavor) +
     Number(!!sel.color)
 
+  // ------------------------------ JSX UI -----------------------------------
+
   return (
     <main className="dy-wrap">
       <div className="dy-content">
         {/* Stepper */}
         <nav className="dy-stepper" aria-label="Steps">
-          {CONFIG.steps.map((step, i) => {
+          {[
+            { id: "size" as StepId, title: "Size" },
+            { id: "artwork" as StepId, title: "Artwork" },
+            { id: "flavor" as StepId, title: "Finish" },
+            { id: "color" as StepId, title: "Color" },
+            { id: "summary" as StepId, title: "Summary" },
+          ].map((step, i) => {
             const done =
               (step.id === "size" && !!sel.size) ||
               (step.id === "artwork" && !!sel.art) ||
@@ -317,14 +489,12 @@ export default function DesignPage() {
           })}
           <div
             className="dy-stepper-progress"
-            style={{
-              ["--dy-progress" as any]: (doneCount / 4) * 100 + "%",
-            }}
+            style={{ ["--dy-progress" as any]: (doneCount / 4) * 100 + "%" }}
           />
         </nav>
 
         <section className="dy-grid">
-          {/* LEFT column — single slot with the scene */}
+          {/* LEFT column — stage */}
           <div className="dy-col">
             <div className="dy-stage" style={previewVars}>
               {/* STEP 1 — SIZE */}
@@ -351,7 +521,7 @@ export default function DesignPage() {
                           <span className="dy-bullet" aria-hidden />
                           <span className="dy-option-text">{opt.label}</span>
                           <span className="dy-price">
-                            {CONFIG.currency}
+                            {currency}
                             {opt.basePrice}
                           </span>
                         </label>
@@ -361,7 +531,7 @@ export default function DesignPage() {
                 </article>
               )}
 
-              {/* STEP 2 — ARTWORK (separate options: Upload | Examples | Generate) */}
+              {/* STEP 2 — ARTWORK */}
               {active === "artwork" && (
                 <article className="dy-card">
                   <header className="dy-card-header">
@@ -370,17 +540,17 @@ export default function DesignPage() {
                   </header>
 
                   <div className="dy-art dy-art-inline">
-                    {/* OPTION 1 — Upload a file */}
+                    {/* Upload */}
                     <div className="dy-upload">
                       <div className="dy-upload-inner">
                         <div className="dy-upload-title">Upload a file</div>
                         <p className="dy-subtle">
-                          Accepted: PNG, JPG, WEBP (max {MAX_MB}MB)
+                          Accepted: PNG, JPG, WEBP (max 6MB)
                         </p>
                         <label className="dy-upload-btn">
                           <input
                             type="file"
-                            accept={ACCEPT}
+                            accept=".png,.jpg,.jpeg,.webp"
                             onChange={(e) => onUploadFile(e.target.files?.[0])}
                           />
                           <span>Choose file</span>
@@ -406,7 +576,7 @@ export default function DesignPage() {
                       </div>
                     </div>
 
-                    {/* OPTION 2 — Pick an example */}
+                    {/* Examples */}
                     <div className="dy-examples">
                       <div className="dy-examples-title">Pick an example</div>
                       <div className="dy-examples-grid">
@@ -438,7 +608,7 @@ export default function DesignPage() {
                     </div>
                   </div>
 
-                  {/* OPTION 3 — Generate (separate block) */}
+                  {/* Generate (placeholder) */}
                   <div className="dy-generate">
                     <div className="dy-generate-title">Generate artwork</div>
                     <p className="dy-subtle">
@@ -448,10 +618,9 @@ export default function DesignPage() {
                     <button
                       type="button"
                       className="dy-btn dy-btn-generate"
-                      onClick={() => {
-                        /* placeholder – no action */
+                      onClick={() =>
                         alert("The generation feature is a placeholder 🙂")
-                      }}
+                      }
                       aria-label="Generate artwork"
                     >
                       Generate
@@ -460,7 +629,7 @@ export default function DesignPage() {
                 </article>
               )}
 
-              {/* STEP 3 — FINISH (Flavor) */}
+              {/* STEP 3 — FINISH (Flavor → Material) */}
               {active === "flavor" && (
                 <article className="dy-card">
                   <header className="dy-card-header">
@@ -469,7 +638,12 @@ export default function DesignPage() {
                   </header>
                   <div className="dy-options">
                     {flavorOptions.map((opt) => {
-                      const disabled = isOptionDisabled("flavor", opt.id, sel)
+                      const disabled = isOptionDisabled(
+                        "flavor",
+                        opt.id,
+                        sel,
+                        rules
+                      )
                       const checked = sel.flavor === opt.id
                       return (
                         <label
@@ -493,7 +667,7 @@ export default function DesignPage() {
                           <span className="dy-option-text">{opt.label}</span>
                           {opt.priceDelta ? (
                             <span className="dy-price">
-                              +{CONFIG.currency}
+                              +{currency}
                               {opt.priceDelta}
                             </span>
                           ) : (
@@ -515,7 +689,12 @@ export default function DesignPage() {
                   </header>
                   <div className="dy-swatches">
                     {colorOptions.map((opt) => {
-                      const disabled = isOptionDisabled("color", opt.id, sel)
+                      const disabled = isOptionDisabled(
+                        "color",
+                        opt.id,
+                        sel,
+                        rules
+                      )
                       const checked = sel.color === opt.id
                       return (
                         <label
@@ -582,8 +761,8 @@ export default function DesignPage() {
                     <div className="dy-summary-total">
                       <dt>Total</dt>
                       <dd>
-                        {CONFIG.currency}
-                        {price || 0}
+                        {currency}
+                        {livePriceEur || 0}
                       </dd>
                     </div>
                   </dl>
@@ -597,16 +776,18 @@ export default function DesignPage() {
                     <button
                       className="dy-btn"
                       onClick={addToCart}
-                      disabled={!size || !sel.art || !flavor || !color}
+                      disabled={
+                        adding || !size || !sel.art || !flavor || !color
+                      }
                     >
-                      Add to cart
+                      {adding ? "Adding..." : "Add to cart"}
                     </button>
                   </div>
                 </article>
               )}
             </div>
 
-            {/* Navigation buttons below the card */}
+            {/* Navigation below the stage */}
             <div className="dy-nav">
               <button
                 className="dy-btn dy-btn-secondary"
@@ -625,7 +806,7 @@ export default function DesignPage() {
             </div>
           </div>
 
-          {/* RIGHT column — LIVE preview */}
+          {/* RIGHT column — live preview */}
           <div className="dy-col">
             <aside className="dy-preview" style={previewVars}>
               <div
@@ -635,7 +816,6 @@ export default function DesignPage() {
                 <div className="dy-preview-title">Live preview</div>
 
                 <div className="dy-preview-slab">
-                  {/* Artwork overlay — fills the slab */}
                   {sel.art?.dataUrl && (
                     <img
                       className="dy-preview-art"

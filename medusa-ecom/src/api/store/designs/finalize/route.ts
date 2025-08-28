@@ -14,7 +14,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
         const orderModule = req.scope.resolve(Modules.ORDER)
         const cartModule = req.scope.resolve(Modules.CART)
 
-        // 1) Pobierz zamówienie
+        // 1) Download an order
         const order = await orderModule.retrieveOrder(order_id)
         if (!order) {
             return res.status(404).json({ code: "order_not_found", message: "Order not found" })
@@ -26,7 +26,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
         const moved: Array<{ item_id?: string; fromUrl: string; toUrl: string; source: "order" | "cart" }> = []
         const candidates: Array<{ source: "order" | "cart"; item_id?: string; fileUrl?: string; fileName?: string }> = []
 
-        // Helper: przenieś jeśli url to /uploads/tmp/...
+        // Helper: move if url is /uploads/tmp/...
         const tryMove = (fileUrl?: string, fileName?: string, item_id?: string, source: "order" | "cart" = "order") => {
             if (!fileUrl) return
             candidates.push({ source, item_id, fileUrl, fileName })
@@ -37,13 +37,13 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
             }
         }
 
-        // 2) Skanuj pozycje w zamówieniu
+        // 2) Scan positions in an order
         for (const it of ((order as any).items ?? [])) {
             const meta = it?.metadata ?? {}
             tryMove(meta.fileUrl, meta.fileName, it?.id, "order")
         }
 
-        // 3) Jeśli nic nie przeniesiono – spróbuj pozycje z koszyka powiązanego z zamówieniem
+        // 3) If nothing was moved then try positions from cart assigned to an order
         if (moved.length === 0 && cartId) {
             try {
                 const cart = await cartModule.retrieveCart(cartId)
@@ -62,7 +62,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
             moved_count: moved.length,
             moved,
             candidates_count: candidates.length,
-            candidates, // podgląd co widzimy; ułatwia diagnozę
+            candidates, // overview
             hint: "Make sure /uploads is served statically (e.g., Nginx). Ensure fileUrl from /store/designs/add starts with /uploads/tmp/…",
         })
     } catch (e: any) {

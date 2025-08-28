@@ -4,38 +4,41 @@ import React, { useEffect, useMemo, useState } from "react"
 import "./design.css"
 
 /**
- * This page integrates the configurator with the Medusa backend.
- * It uses:
- * - GET  /store/designs/config   -> to render options & base prices
- * - POST /store/designs/price    -> to show live pricing
- * - POST /store/designs/upload   -> to upload the artwork (base64)
- * - POST /store/designs/add      -> to add the configured item to cart
- * - POST /api/gg/cart/set        -> to persist cart_id cookie in Next (server)
+ * Integrates the configurator with Medusa v2 endpoints:
+ * - GET  /store/designs/config
+ * - POST /store/designs/price
+ * - POST /store/designs/upload
+ * - POST /store/designs/add
+ * - POST /api/gg/cart/set  (Next server route to persist cart cookie)
  *
  * Notes:
- * - "flavor" here maps to "material" in the backend
- * - "artwork" in the UI maps to fileName/fileUrl in the backend
+ * - UI "flavor" maps to backend "material"
+ * - Artwork upload expects a data URL (data:image/...;base64,...)
  */
 
-// ---------- Tiny client helpers (kept inline to avoid extra files) ----------
+// ---------------- Client helpers ----------------
 
-// Configure your Medusa URL & publishable key via .env.local
 const BASE = process.env.NEXT_PUBLIC_MEDUSA_URL || "http://localhost:9000"
-const PK = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+const PK = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
 
+/** Small fetch wrapper with PAK header and helpful error logging. */
 async function jfetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      "x-publishable-api-key": PK || "",
+      "x-publishable-api-key": PK,
       ...(init?.headers || {}),
     },
     cache: "no-store",
+    // no credentials needed here; cookie is set via our Next API route
   })
+
   if (!res.ok) {
+    // This prints server text to devtools for easier debugging
     const text = await res.text().catch(() => "")
-    throw new Error(`Request failed ${res.status}: ${text || res.statusText}`)
+    console.warn("jfetch error", res.status, text)
+    throw new Error(`HTTP ${res.status}`)
   }
   return res.json()
 }
@@ -99,7 +102,7 @@ function addDesignToCart(body: {
   })
 }
 
-/** Call Next server API to set the cart cookie so server actions see the same cart. */
+/** Set the cart cookie on the Next server so server actions use the same cart. */
 async function setCartCookie(cartId: string) {
   const res = await fetch("/api/gg/cart/set", {
     method: "POST",
@@ -109,7 +112,7 @@ async function setCartCookie(cartId: string) {
   if (!res.ok) throw new Error("Failed to set cart cookie")
 }
 
-// ----------------------------- Types ---------------------------------------
+// ---------------- Types ----------------
 
 type StepId = "size" | "artwork" | "flavor" | "color" | "summary"
 
@@ -133,7 +136,7 @@ type SizeDef = OptionCommon & { wCm: number; hCm: number; basePrice: number }
 type FlavorDef = OptionCommon & { priceDelta: number; intensity?: number }
 type ColorDef = OptionCommon & { swatch: string; hue: number }
 
-// --------------------------- Local helpers ---------------------------------
+// ---------------- Utils ----------------
 
 const STORAGE_KEY = "design-your-own-v4"
 
@@ -141,7 +144,7 @@ function cx(...c: (string | false | undefined)[]) {
   return c.filter(Boolean).join(" ")
 }
 
-/** Check if option is disabled by simple local rules (kept from your UI). */
+/** Local rule helper (kept simple; can be moved server-side later). */
 function isOptionDisabled(
   stepId: StepId,
   optionId: string,
@@ -165,16 +168,16 @@ function isOptionDisabled(
   return false
 }
 
-// ------------------------------ Component ----------------------------------
+// ---------------- Component ----------------
 
 export default function DesignPage() {
-  // Config fetched from backend
+  // Config from backend
   const [currency, setCurrency] = useState<"€" | "EUR">("€")
   const [sizes, setSizes] = useState<Record<string, SizeDef>>({})
   const [flavors, setFlavors] = useState<Record<string, FlavorDef>>({})
   const [colors, setColors] = useState<Record<string, ColorDef>>({})
 
-  // Keep your simple demo rules for now (can be extended from backend later)
+  // Simple compatibility rules (kept from your UI)
   const [rules] = useState([
     { when: { flavor: "galaxy" }, disallow: { color: ["white"] } },
     { when: { color: "white" }, disallow: { flavor: ["galaxy"] } },
@@ -191,13 +194,12 @@ export default function DesignPage() {
         const cfg = await getDesignConfig()
         setCurrency(cfg.currency === "EUR" ? "€" : (cfg.currency as any))
 
-        // sizes
+        // Build size map; prefix with 's' to keep your UI ids (e.g. "s21x21")
         const sizeMap: Record<string, SizeDef> = {}
         cfg.options.size.forEach((s) => {
-          // Try to parse width/height from id like "21x21"
           const [w, h] = s.id.split("x")
           sizeMap[`s${s.id}`] = {
-            id: `s${s.id}`, // keep local ids prefixed with 's' to match your UI
+            id: `s${s.id}`,
             label: s.label || s.id.replace("x", " × "),
             wCm: Number(w) || 16,
             hCm: Number(h) || 9,
@@ -206,27 +208,26 @@ export default function DesignPage() {
         })
         setSizes(sizeMap)
 
-        // flavors (materials)
+        // Materials -> flavors in UI
         const flMap: Record<string, FlavorDef> = {}
         cfg.options.material.forEach((m) => {
           flMap[m.id] = {
             id: m.id,
             label: m.label,
             priceDelta: m.surcharge_eur,
-            // Simple visual intensity mapping for the glow
+            // Visual intensity just for glow effect
             intensity:
               m.id === "shadow" ? 0.45 : m.id === "galaxy" ? 1.0 : 0.55,
           }
         })
         setFlavors(flMap)
 
-        // colors
+        // Colors
         const colMap: Record<string, ColorDef> = {}
         cfg.options.color.forEach((c) => {
           colMap[c.id] = {
             id: c.id,
             label: c.label,
-            // Simple default swatches/hues (can be themed later)
             swatch:
               c.id === "black"
                 ? "#0b0b0c"
@@ -240,7 +241,7 @@ export default function DesignPage() {
                 ? "#ff3b58"
                 : c.id === "brown"
                 ? "#7b4b2a"
-                : "#2fa7ff",
+                : "#2fa7ff", // blue default
             hue:
               c.id === "blue"
                 ? 205
@@ -254,7 +255,7 @@ export default function DesignPage() {
                 ? 25
                 : c.id === "white"
                 ? 0
-                : 270,
+                : 270, // black default
           }
         })
         setColors(colMap)
@@ -277,7 +278,7 @@ export default function DesignPage() {
     } catch {}
   }, [sel])
 
-  // Selected objects
+  // Selected option objects
   // @ts-ignore
   const size = sel.size ? sizes[sel.size] : undefined
   // @ts-ignore
@@ -285,7 +286,7 @@ export default function DesignPage() {
   // @ts-ignore
   const color = sel.color ? colors[sel.color] : undefined
 
-  // Live price from backend
+  // Live price from backend (guarded: only when we have all required selections)
   const [livePriceEur, setLivePriceEur] = useState<number>(0)
   useEffect(() => {
     ;(async () => {
@@ -294,23 +295,22 @@ export default function DesignPage() {
         return
       }
       try {
-        // Backend expects sizes like "21x21" (no 's' prefix)
-        const backendSize = size.id.replace(/^s/, "")
+        const backendSize = size.id.replace(/^s/, "") // "s21x21" -> "21x21"
         const p = await previewPrice({
           size: backendSize,
-          material: flavor.id,
+          material: flavor.id, // flavor -> material
           color: color.id,
           qty: 1,
         })
         setLivePriceEur(Math.round(p.breakdown.total_eur))
       } catch {
-        // Fallback: base + delta if preview endpoint fails
+        // Fallback if preview endpoint fails
         setLivePriceEur((size?.basePrice || 0) + (flavor?.priceDelta || 0))
       }
     })()
   }, [size?.id, flavor?.id, color?.id])
 
-  // UI controls
+  // Basic navigation & preview styling
   const order: StepId[] = ["size", "artwork", "flavor", "color", "summary"]
   const canNext =
     (active === "size" && !!sel.size) ||
@@ -323,7 +323,6 @@ export default function DesignPage() {
     setActive(order[Math.min(order.length - 1, order.indexOf(active) + 1)])
   const goPrev = () => setActive(order[Math.max(0, order.indexOf(active) - 1)])
 
-  // CSS vars for preview
   const previewVars: React.CSSProperties = useMemo(() => {
     const hue = color?.hue ?? 205
     const intensity = flavor?.intensity ?? 0.55
@@ -354,7 +353,7 @@ export default function DesignPage() {
 
   function onPickExample(name: "example1.png" | "example2.png") {
     setArtError(null)
-    const url = `/${name}` // stored in /public
+    const url = `/${name}` // file in /public
     setSel((prev) => ({
       ...prev,
       art: { source: "example", name, dataUrl: url },
@@ -397,7 +396,7 @@ export default function DesignPage() {
     if (!size || !flavor || !color || !sel.art) return
     setAdding(true)
     try {
-      // 1) Upload artwork if user provided a file
+      // 1) Upload artwork if needed
       let fileUrl: string | undefined
       let fileName: string | undefined
 
@@ -409,29 +408,28 @@ export default function DesignPage() {
         fileUrl = up.fileUrl
         fileName = up.fileName
       } else {
-        // Example asset, you may or may not upload; we just pass the URL for now
-        fileUrl = sel.art.dataUrl
+        fileUrl = sel.art.dataUrl // example assets
         fileName = sel.art.name
       }
 
-      // 2) Call /store/designs/add to create or reuse a cart and add the line item
+      // 2) Add to cart in Medusa
       const cart = await addDesignToCart({
-        size: size.id.replace(/^s/, ""), // "s21x21" -> "21x21"
-        material: flavor.id, // flavor maps to backend "material"
+        size: size.id.replace(/^s/, ""),
+        material: flavor.id, // flavor -> material
         color: color.id,
         qty: 1,
         fileName,
         fileUrl,
       })
 
-      // 3) Extract cart id and set cookie via Next API
+      // 3) Persist cart cookie in Next (so server actions see the same cart)
       const cartId = cart?.id || cart?.cart?.id || cart?.data?.id
       if (cartId) {
         await setCartCookie(cartId)
       }
 
       alert("Added to cart ✅")
-      // Optionally: navigate to cart page
+      // Optionally navigate to /cart
       // router.push("/cart")
     } catch (e: any) {
       alert(`Failed: ${e?.message || "Error adding to cart"}`)
@@ -440,7 +438,7 @@ export default function DesignPage() {
     }
   }
 
-  // Options for rendering
+  // Render options
   const sizeOptions = Object.values(sizes)
   const flavorOptions = Object.values(flavors)
   const colorOptions = Object.values(colors)
@@ -451,7 +449,7 @@ export default function DesignPage() {
     Number(!!sel.flavor) +
     Number(!!sel.color)
 
-  // ------------------------------ JSX UI -----------------------------------
+  // ---------------- Render ----------------
 
   return (
     <main className="dy-wrap">
@@ -612,8 +610,7 @@ export default function DesignPage() {
                   <div className="dy-generate">
                     <div className="dy-generate-title">Generate artwork</div>
                     <p className="dy-subtle">
-                      This option can create an image from a description
-                      (placeholder).
+                      Prototype only — not implemented yet.
                     </p>
                     <button
                       type="button"

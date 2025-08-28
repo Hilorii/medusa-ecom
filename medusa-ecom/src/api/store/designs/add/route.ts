@@ -68,11 +68,11 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
         await cartModule.addLineItems(cart.id, [
             {
-                title: lineTitle,
+                title: "Custom",
                 product_id: product.id,
                 variant_id: variant.id,
-                quantity: price.qty,
-                unit_price: price.unit_price, // override catalog price with our calculated one
+                quantity: qty,
+                unit_price: price.unit_price,
                 metadata: {
                     size,
                     material,

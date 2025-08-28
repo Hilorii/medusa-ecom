@@ -26,6 +26,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // comments in English: update quantity handler
   const changeQuantity = async (quantity: number) => {
     setError(null)
     setUpdating(true)
@@ -37,6 +38,15 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
 
   const maxQtyFromInventory = 10
   const maxQuantity = item.variant?.manage_inventory ? 10 : maxQtyFromInventory
+
+  // comments in English: extract our custom metadata for display
+  const md = (item.metadata || {}) as Record<string, any>
+  const metaRows: Array<[string, string | undefined]> = [
+    ["Size", md.size],
+    ["Material", md.material], // in UI it’s “flavor”
+    ["Color", md.color],
+    ["File", md.fileName],
+  ].filter(([, v]) => Boolean(v)) as Array<[string, string]>
 
   return (
     <div
@@ -66,7 +76,35 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
         <Text className="rrc-item-title" data-testid="product-title">
           {item.product_title}
         </Text>
+
+        {/* comments in English: standard variant options (size/variant from Medusa) */}
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
+
+        {/* comments in English: our custom metadata block (Design Your Own selections) */}
+        {metaRows.length > 0 && (
+          <div className="gg-meta">
+            <ul className="gg-meta-list">
+              {metaRows.map(([k, v]) => (
+                <li key={k} className="gg-meta-item">
+                  <span className="gg-meta-k">{k}:</span>{" "}
+                  <span className="gg-meta-v">{v}</span>
+                </li>
+              ))}
+              {md.fileUrl && (
+                <li className="gg-meta-item">
+                  <a
+                    href={md.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="gg-meta-link"
+                  >
+                    View artwork
+                  </a>
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* QTY – only when fully seen */}

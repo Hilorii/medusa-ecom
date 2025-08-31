@@ -1,3 +1,8 @@
+// All comments in English. Breadcrumb logs included (A → J).
+// This handler intentionally returns a lean JSON to avoid crashes caused by
+// serializing very large/cyclic cart objects. Once stable, you can expand it.
+
+/* eslint-disable no-console */
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
 import { ggCalculatePrice, ggValidateSelections } from "../../../../lib/gg-pricing"
@@ -8,52 +13,71 @@ type Body = GGSelections & {
     fileUrl?: string
 }
 
-const PRODUCT_HANDLE = "design-your-own"
-const VARIANT_TITLE = "Custom"
+const PRODUCT_HANDLE = process.env.GG_PRODUCT_HANDLE || "design-your-own"
+const VARIANT_TITLE = process.env.GG_VARIANT_TITLE || "Custom"
 
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     try {
-        const { size, material, color, qty, fileName, fileUrl } = req.body as Body
+        // A) Reached handler
+        console.log("[gg:add] A: hit /store/designs/add")
 
-        // 1) Validate payload vs. our config
+        // B) Parse + basic validation
+        const { size, material, color, qty, fileName, fileUrl } = (req.body || {}) as Body
+        console.log("[gg:add] B: body", { size, material, color, qty, hasFileUrl: !!fileUrl })
+
         const validation = ggValidateSelections({ size, material, color, qty })
         if (!validation.ok) {
+            console.warn("[gg:add] C: invalid payload:", validation.reason)
             return res.status(400).json({ code: "invalid_payload", message: validation.reason })
         }
 
-        // 2) Calculate price (minor units)
+        // C) Price in minor units (integer)
         const price = ggCalculatePrice({ size, material, color, qty })
+        if (!Number.isInteger(price.unit_price)) {
+            console.warn("[gg:add] D: unit_price not integer, coercing:", price.unit_price)
+            price.unit_price = Math.round(Number(price.unit_price) || 0)
+        }
+        console.log("[gg:add] D: price", price)
 
-        // 3) Resolve modules
+        // D) Resolve modules once
+        console.log("[gg:add] E: resolving modules")
         const productModule = req.scope.resolve(Modules.PRODUCT)
         const cartModule = req.scope.resolve(Modules.CART)
         const regionModule = req.scope.resolve(Modules.REGION)
 
-        // 4) Region (EUR)
+        // E) Region (EUR)
+        console.log("[gg:add] F: listRegions(currency=eur)")
         const eurRegions = await regionModule.listRegions({ currency_code: "eur" })
         if (!eurRegions?.length) {
+            console.error("[gg:add] F!: no EUR region configured")
             return res.status(500).json({ code: "no_region", message: "No EUR region configured." })
         }
         const region = eurRegions[0]
+        console.log("[gg:add] F1: using region", region.id)
 
-        // 5) Get product & variant (ONLY by handle; do not populate non-existent relations)
+        // F) Product + variant
+        console.log("[gg:add] G: listProducts(handle)", PRODUCT_HANDLE)
         const [product] = await productModule.listProducts(
             { handle: [PRODUCT_HANDLE] },
-            { relations: ["variants"] } // 'sales_channels' is NOT a relation on Product in v2
+            { relations: ["variants"] } // keep it lean; no heavy relations
         )
         if (!product) {
+            console.error("[gg:add] G!: product not found by handle:", PRODUCT_HANDLE)
             return res.status(404).json({ code: "product_not_found", message: "Design Your Own product not found." })
         }
         const variant = product.variants?.find((v: any) => v.title === VARIANT_TITLE)
         if (!variant) {
+            console.error("[gg:add] G!: variant not found by title:", VARIANT_TITLE)
             return res.status(500).json({ code: "variant_not_found", message: "Custom variant not found." })
         }
+        console.log("[gg:add] G1: product/variant", product.id, variant.id)
 
-        // 6) Find or create cart (guest flow). We don't filter by sales channel here.
+        // G) Reuse or create cart (guest flow)
+        console.log("[gg:add] H: listCarts(region_id)")
         const existing = await cartModule.listCarts({ region_id: region.id })
         let cart = existing?.[0]
-
         if (!cart) {
+            console.log("[gg:add] H1: createCarts(...)")
             const created = await cartModule.createCarts([
                 {
                     region_id: region.id,
@@ -61,18 +85,20 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
                 } as any,
             ])
             cart = created[0]
+            console.log("[gg:add] H2: created cart", cart.id)
+        } else {
+            console.log("[gg:add] H2: reused cart", cart.id)
         }
 
-        // 7) Add line item — v2 DTO requires 'title'
-        const lineTitle = `Design Your Own (${size} • ${material} • ${color})`
-
+        // H) Add line item
+        console.log("[gg:add] I: addLineItems")
         await cartModule.addLineItems(cart.id, [
             {
-                title: "Custom",
+                title: "Custom", // keep stable title; UI shows composition separately
                 product_id: product.id,
                 variant_id: variant.id,
-                quantity: qty,
-                unit_price: price.unit_price,
+                quantity: qty || 1,
+                unit_price: price.unit_price, // must be integer (minor units)
                 metadata: {
                     size,
                     material,
@@ -83,12 +109,32 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
                 },
             } as any,
         ])
+        console.log("[gg:add] I1: line item added")
 
-        // 8) Return updated cart
-        const updated = await cartModule.retrieveCart(cart.id)
+        // I) Return lean JSON (avoid serializing the full cart object)
+        console.log("[gg:add] J: returning lean payload")
+        return res.json({ ok: true, cart_id: cart.id })
 
-        return res.json(updated)
+        // — If you later want to return more data, prefer a lean mapping:
+        // const updated = await cartModule.retrieveCart(cart.id)
+        // const lean = {
+        //   id: updated.id,
+        //   currency_code: updated.currency_code,
+        //   region_id: updated.region_id,
+        //   items: (updated.items || []).map((i: any) => ({
+        //     id: i.id,
+        //     title: i.title,
+        //     quantity: i.quantity,
+        //     unit_price: i.unit_price,
+        //     metadata: i.metadata,
+        //   })),
+        //   subtotal: (updated as any).subtotal,
+        //   total: (updated as any).total,
+        // }
+        // return res.json(lean)
+
     } catch (e: any) {
+        console.error("[gg:add] ERR:", e)
         return res.status(500).json({
             code: "server_error",
             message: e?.message || "Internal error",

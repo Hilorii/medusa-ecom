@@ -11,16 +11,23 @@ export async function POST(req: Request) {
       )
     }
 
-    // tworzysz odpowiedź i ustawiasz cookie na niej
-    const res = NextResponse.json({ ok: true })
+    const res = NextResponse.json({ ok: true, cart_id })
+
+    // Remove previously set wrong cookie name (if any)
     res.cookies.set({
       name: "cart_id",
-      value: cart_id,
+      value: "",
       path: "/",
+      maxAge: -1,
+    })
+
+    // Set the cookie name expected by server actions: "_medusa_cart_id"
+    res.cookies.set("_medusa_cart_id", cart_id, {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: "strict", // match your server util
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 30, // 30 dni
+      maxAge: 60 * 60 * 24 * 7, // 7 days (match setCartId in cookies.ts)
+      path: "/",
     })
 
     return res

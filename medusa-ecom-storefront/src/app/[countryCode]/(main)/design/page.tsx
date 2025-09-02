@@ -347,8 +347,13 @@ export default function DesignPage() {
       const cartId = extractCartId(cartResp)
       if (cartId) {
         await setCartCookie(cartId)
-        // Navigate to /cart so SSR renders fresh items with the new cookie
-        router.push("/cart")
+
+        // 🔴 KEY CHANGE: refresh the current route so the navbar re-renders with new cart qty
+        // comments in English: this triggers a server-components re-fetch (RSC) and updates the badge
+        router.refresh()
+
+        // (optional) tiny UX hint
+        // toast.success?.("Added to cart") // if you use a toast lib; else remove
       } else {
         console.warn(
           "[gg] No cart id returned from /store/designs/add",

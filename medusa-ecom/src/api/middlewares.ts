@@ -19,5 +19,13 @@ export default defineMiddlewares({
         brand_id: z.string().optional(),
       },
     },
+    {
+      matcher: "/store/designs/upload",
+      method: ["POST", "OPTIONS"],
+      bodyParser: {
+        // Needed to raise size limit for files to upload! It is set to 6MB in .env for users right now.
+        sizeLimit: "15mb",
+      },
+    },
   ],
 });

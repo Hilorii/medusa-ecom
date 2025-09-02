@@ -1,7 +1,8 @@
 "use client"
 
 import { isManual, isStripe } from "@lib/constants"
-import { placeOrder } from "@lib/data/cart"
+// ⬇️ Import the client-safe placeOrder helper
+import { placeOrder } from "@lib/client/cart"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@medusajs/ui"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
@@ -36,8 +37,13 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
         />
       )
     case isManual(paymentSession?.provider_id):
+      // ⬇️ Pass cart so we can call placeOrder(cart.id)
       return (
-        <ManualTestPaymentButton notReady={notReady} data-testid={dataTestId} />
+        <ManualTestPaymentButton
+          cart={cart}
+          notReady={notReady}
+          data-testid={dataTestId}
+        />
       )
     default:
       return <Button disabled>Select a payment method</Button>
@@ -57,7 +63,8 @@ const StripePaymentButton = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const onPaymentCompleted = async () => {
-    await placeOrder()
+    // ⬇️ Use cart.id when placing the order
+    await placeOrder(cart.id)
       .catch((err) => {
         setErrorMessage(err.message)
       })
@@ -90,9 +97,9 @@ const StripePaymentButton = ({
           card: card,
           billing_details: {
             name:
-              cart.billing_address?.first_name +
+              (cart.billing_address?.first_name || "") +
               " " +
-              cart.billing_address?.last_name,
+              (cart.billing_address?.last_name || ""),
             address: {
               city: cart.billing_address?.city ?? undefined,
               country: cart.billing_address?.country_code ?? undefined,
@@ -151,12 +158,21 @@ const StripePaymentButton = ({
   )
 }
 
-const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
+const ManualTestPaymentButton = ({
+  cart,
+  notReady,
+  "data-testid": dataTestId,
+}: {
+  cart: HttpTypes.StoreCart
+  notReady: boolean
+  "data-testid"?: string
+}) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const onPaymentCompleted = async () => {
-    await placeOrder()
+    // ⬇️ Use cart.id when placing the order
+    await placeOrder(cart.id)
       .catch((err) => {
         setErrorMessage(err.message)
       })
@@ -167,7 +183,6 @@ const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
 
   const handlePayment = () => {
     setSubmitting(true)
-
     onPaymentCompleted()
   }
 
@@ -178,7 +193,7 @@ const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
         isLoading={submitting}
         onClick={handlePayment}
         size="large"
-        data-testid="submit-order-button"
+        data-testid={dataTestId || "submit-order-button"}
       >
         Place order
       </Button>

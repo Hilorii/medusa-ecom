@@ -1,24 +1,54 @@
 import { Heading, Text } from "@medusajs/ui"
-import InteractiveLink from "@modules/common/components/interactive-link"
+import Link from "next/link"
 import "./empty-cart.css"
 
+/**
+ * EmptyCartMessage
+ * - Pure Next.js <Link> (no InteractiveLink)
+ * - Subtle glass panel with micro-interactions
+ * - Accessible structure and focus-visible states
+ */
 const EmptyCartMessage = () => {
   return (
-    <div
-      className="rrc-empty rrc-glass rrc-elevate"
+    <section
+      className="gg-empty-cart-wrap"
+      aria-labelledby="gg-empty-cart-title"
       data-testid="empty-cart-message"
     >
-      <Heading level="h1" className="rrc-empty-title">
+      {/* Decorative cart icon (visual only) */}
+      {/*<div className="gg-empty-cart-icon" aria-hidden="true">*/}
+      {/*  🛒*/}
+      {/*</div>*/}
+
+      <Heading
+        id="gg-empty-cart-title"
+        level="h1"
+        className="gg-empty-cart-title"
+      >
         Cart
       </Heading>
-      <Text className="rrc-empty-text">
-        You don&apos;t have anything in your cart. Let&apos;s change that — use
-        the link below to start browsing our products.
+
+      <Text className="gg-empty-cart-text">
+        Your cart is empty. Start crafting your own design.
       </Text>
-      <div className="rrc-empty-action">
-        <InteractiveLink href="/store">Explore products</InteractiveLink>
+
+      <div className="gg-empty-cart-cta">
+        {/* Primary CTA */}
+        <Link
+          href="/design"
+          className="gg-empty-cart-btn gg-empty-cart-btn--primary"
+        >
+          Design your own product
+        </Link>
       </div>
-    </div>
+
+      {/* Helpful tips to make the empty state engaging */}
+      <ul className="gg-empty-cart-tips" aria-label="Helpful tips">
+        <li>Choose size and finish, then upload your artwork.</li>
+        <li>See live preview while configuring your design.</li>
+        <li>Add to cart with one click when you’re ready.</li>
+      </ul>
+    </section>
   )
 }
 

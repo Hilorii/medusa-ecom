@@ -1,15 +1,173 @@
-.rrc-empty {
-    padding: 72px 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+/* ---- Empty Cart (glass panel) ----
+   Naming: gg-empty-cart-*
+*/
+
+/* Main glass container */
+.gg-empty-cart-wrap {
+    /* Layout */
+    padding: 72px 24px;
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 16px;
+    margin-top: 50px;
+
+    /* Glass look */
+    background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.28) 0%,
+            rgba(255, 255, 255, 0.18) 100%
+    );
+    backdrop-filter: blur(10px) saturate(110%);
+    -webkit-backdrop-filter: blur(10px) saturate(110%);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 16px;
+
+    /* Depth */
+    box-shadow:
+            0 8px 24px rgba(20, 20, 20, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.25);
+
+    /* Motion */
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
-.rrc-empty-title { font-size: 1.75rem !important; }
-.rrc-empty-text { max-width: 36rem; }
-.rrc-empty-action { margin-top: 8px; }
+.gg-empty-cart-wrap:hover {
+    transform: translateY(-2px);
+    box-shadow:
+            0 12px 28px rgba(20, 20, 20, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.45);
+}
 
-@media (max-width: 640px) {
-    .rrc-empty { padding: 56px 16px; }
+/* Visual emoji icon */
+.gg-empty-cart-icon {
+    font-size: 2rem;
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+    user-select: none;
+    width: max-content;
+}
+
+/* Title and copy */
+.gg-empty-cart-title {
+    margin-top: 4px;
+    font-size: 1.75rem !important; /* keep in line with design */
+    letter-spacing: 0.2px;
+}
+
+.gg-empty-cart-text {
+    max-width: 40rem;
+    color: white;
+}
+
+/* CTA group */
+.gg-empty-cart-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+/* Base button styles applied to <a> inside Next <Link> */
+.gg-empty-cart-btn {
+    text-decoration: none !important;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+
+    font-weight: 600;
+    letter-spacing: 0.2px;
+
+    transition:
+            background-color 160ms ease,
+            color 160ms ease,
+            border-color 160ms ease,
+            transform 120ms ease,
+            box-shadow 160ms ease;
+}
+
+/* Primary button */
+.gg-empty-cart-btn--primary {
+    background: rgba(20, 20, 20, 0.9);
+    color: #fff;
+    border-color: rgba(20, 20, 20, 0.95);
+    box-shadow: 0 6px 14px rgba(20, 20, 20, 0.18);
+}
+
+.gg-empty-cart-btn--primary:hover {
+    transform: translateY(-1px);
+    background: rgba(20, 20, 20, 0.98);
+    box-shadow: 0 8px 18px rgba(20, 20, 20, 0.22);
+}
+
+.gg-empty-cart-btn--primary:focus-visible {
+    outline: none;
+    box-shadow:
+            0 0 0 3px rgba(255, 255, 255, 0.9),
+            0 0 0 6px rgba(20, 20, 20, 0.7);
+}
+
+/* Ghost button (transparent on glass) */
+.gg-empty-cart-btn--ghost {
+    background: rgba(255, 255, 255, 0.35);
+    color: rgba(20, 20, 20, 0.9);
+    border-color: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(2px);
+}
+
+.gg-empty-cart-btn--ghost:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.5);
+    border-color: rgba(255, 255, 255, 0.75);
+}
+
+.gg-empty-cart-btn--ghost:focus-visible {
+    outline: none;
+    box-shadow:
+            0 0 0 3px rgba(255, 255, 255, 0.9),
+            0 0 0 6px rgba(20, 20, 20, 0.2);
+}
+
+/* Tips */
+.gg-empty-cart-tips {
+    margin-top: 8px;
+    padding-left: 18px;
+    display: grid;
+    gap: 6px;
+    color: rgba(20, 20, 20, 0.75);
+    max-width: 42rem;
+}
+
+.gg-empty-cart-tips li {
+    list-style: "•  ";
+    padding-left: 4px;
+    color: white;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+    .gg-empty-cart-wrap {
+        padding: 56px 18px;
+    }
+    .gg-empty-cart-title {
+        font-size: 1.6rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .gg-empty-cart-wrap {
+        padding: 48px 16px;
+        gap: 14px;
+    }
+    .gg-empty-cart-cta {
+        gap: 10px;
+    }
+    .gg-empty-cart-btn {
+        width: 100%; /* Full-width buttons on small screens */
+    }
 }

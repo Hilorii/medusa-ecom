@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import "./design.css"
 import {
   getDesignConfig,
@@ -81,11 +82,8 @@ function isOptionDisabled(
 
 /** Extracts a cart id from various server response shapes. */
 function extractCartId(resp: any): string | undefined {
-  // Lean payload from our /store/designs/add
   if (resp?.cart_id) return String(resp.cart_id)
-  // Full cart object returned directly
   if (resp?.id) return String(resp.id)
-  // Nested shapes (axios-like / legacy wrappers)
   if (resp?.cart?.id) return String(resp.cart.id)
   if (resp?.data?.id) return String(resp.data.id)
   return undefined
@@ -94,6 +92,8 @@ function extractCartId(resp: any): string | undefined {
 // ---------------- Component ----------------
 
 export default function DesignPage() {
+  const router = useRouter()
+
   // Config from backend
   const [currency, setCurrency] = useState<"€" | "EUR">("€")
   const [sizes, setSizes] = useState<Record<string, SizeDef>>({})
@@ -138,7 +138,6 @@ export default function DesignPage() {
             id: m.id,
             label: m.label,
             priceDelta: m.surcharge_eur,
-            // Visual intensity just for glow effect
             intensity:
               m.id === "shadow" ? 0.45 : m.id === "galaxy" ? 1.0 : 0.55,
           }
@@ -164,7 +163,7 @@ export default function DesignPage() {
                 ? "#ff3b58"
                 : c.id === "brown"
                 ? "#7b4b2a"
-                : "#2fa7ff", // blue default
+                : "#2fa7ff",
             hue:
               c.id === "blue"
                 ? 205
@@ -178,7 +177,7 @@ export default function DesignPage() {
                 ? 25
                 : c.id === "white"
                 ? 0
-                : 270, // black default
+                : 270,
           }
         })
         setColors(colMap)
@@ -227,7 +226,6 @@ export default function DesignPage() {
         })
         setLivePriceEur(Math.round(p.breakdown.total_eur))
       } catch {
-        // Fallback if preview endpoint fails
         setLivePriceEur((size?.basePrice || 0) + (flavor?.priceDelta || 0))
       }
     })()
@@ -338,7 +336,7 @@ export default function DesignPage() {
       // 2) Add to cart in Medusa
       const cartResp = await addDesignToCart({
         size: size.id.replace(/^s/, ""),
-        material: flavor.id, // flavor -> material
+        material: flavor.id,
         color: color.id,
         qty: 1,
         fileName,
@@ -349,17 +347,14 @@ export default function DesignPage() {
       const cartId = extractCartId(cartResp)
       if (cartId) {
         await setCartCookie(cartId)
+        // Navigate to /cart so SSR renders fresh items with the new cookie
+        router.push("/cart")
       } else {
-        // eslint-disable-next-line no-console
         console.warn(
           "[gg] No cart id returned from /store/designs/add",
           cartResp
         )
       }
-
-      alert("Added to cart ✅")
-      // Optionally navigate to /cart:
-      // router.push("/cart")
     } catch (e: any) {
       alert(`Failed: ${e?.message || "Error adding to cart"}`)
     } finally {

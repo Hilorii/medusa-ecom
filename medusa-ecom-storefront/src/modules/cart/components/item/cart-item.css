@@ -38,6 +38,11 @@
     line-height: 1.25;
     margin-bottom: 4px;
 }
+
+.gg-cart-strong{
+    color: #6e6e6e;
+}
+
 .rrc-main [data-testid="product-variant"] { opacity: 0.85; }
 
 /* QTY */

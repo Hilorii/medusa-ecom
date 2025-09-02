@@ -45,7 +45,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
     ["Size", md.size],
     ["Material", md.material], // in UI it’s “flavor”
     ["Color", md.color],
-    ["File", md.fileName],
+    // ["File", md.fileName], // it destroys the ui -.-
   ].filter(([, v]) => Boolean(v)) as Array<[string, string]>
 
   return (
@@ -80,7 +80,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
         {/* comments in English: standard variant options (size/variant from Medusa) */}
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
 
-        {/* comments in English: our custom metadata block (Design Your Own selections) */}
+        {/* Custom metadata block (Design Your Own selections) */}
         {metaRows.length > 0 && (
           <div className="gg-meta">
             <ul className="gg-meta-list">
@@ -112,17 +112,18 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
         <div className="rrc-cell rrc-qty">
           <div className="rrc-qty-wrap">
             <DeleteButton id={item.id} data-testid="product-delete-button" />
-            <CartItemSelect
-              value={item.quantity}
-              onChange={(value) => changeQuantity(parseInt(value.target.value))}
-              data-testid="product-select-button"
-            >
-              {Array.from({ length: Math.min(maxQuantity, 10) }, (_, i) => (
-                <option value={i + 1} key={i}>
-                  {i + 1}
-                </option>
-              ))}
-            </CartItemSelect>
+            {/*<CartItemSelect*/}
+            {/*  value={item.quantity}*/}
+            {/*  onChange={(value) => changeQuantity(parseInt(value.target.value))}*/}
+            {/*  data-testid="product-select-button"*/}
+            {/*>*/}
+            {/*  {Array.from({ length: Math.min(maxQuantity, 10) }, (_, i) => (*/}
+            {/*    <option value={i + 1} key={i}>*/}
+            {/*      {i + 1}*/}
+            {/*    </option>*/}
+            {/*  ))}*/}
+            {/*</CartItemSelect>*/}
+            <strong className="gg-cart-strong">1</strong>
             {updating && <Spinner />}
           </div>
           <ErrorMessage error={error} data-testid="product-error-message" />

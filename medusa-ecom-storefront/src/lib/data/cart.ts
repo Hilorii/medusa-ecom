@@ -37,7 +37,7 @@ export async function retrieveCart(cartId?: string) {
       method: "GET",
       query: {
         fields:
-          "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, +items.total, *promotions, +shipping_methods.name",
+          "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, total, subtotal, tax_total, shipping_total, shipping_subtotal, discount_total, gift_card_total, +items.total, *promotions, +shipping_methods.name",
       },
       headers,
       cache: "no-store",

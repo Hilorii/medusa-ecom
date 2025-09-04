@@ -83,30 +83,36 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
         "[gg:add] G!: product not found by handle:",
         PRODUCT_HANDLE,
       );
-      return res
-        .status(404)
-        .json({
-          code: "product_not_found",
-          message: "Design Your Own product not found.",
-        });
+      return res.status(404).json({
+        code: "product_not_found",
+        message: "Design Your Own product not found.",
+      });
     }
     const variant = product.variants?.find(
       (v: any) => v.title === VARIANT_TITLE,
     );
     if (!variant) {
       console.error("[gg:add] G!: variant not found by title:", VARIANT_TITLE);
-      return res
-        .status(500)
-        .json({
-          code: "variant_not_found",
-          message: "Custom variant not found.",
-        });
+      return res.status(500).json({
+        code: "variant_not_found",
+        message: "Custom variant not found.",
+      });
     }
-    console.log("[gg:add] G1: product/variant", product.id, variant.id);
+    const pKey: any = (req as any).publishable_key_context;
+    const salesChannelId: string | undefined = pKey?.sales_channel_ids?.[0];
+    console.log(
+      "[gg:add] G1: product/variant/sales_channel",
+      product.id,
+      variant.id,
+      salesChannelId,
+    );
 
     // G) Reuse or create cart (guest flow)
-    console.log("[gg:add] H: listCarts(region_id)");
-    const existing = await cartModule.listCarts({ region_id: region.id });
+    console.log("[gg:add] H: listCarts(region_id, sales_channel_id)");
+    const existing = await cartModule.listCarts({
+      region_id: region.id,
+      ...(salesChannelId ? { sales_channel_id: salesChannelId } : {}),
+    });
     let cart = existing?.[0];
     if (!cart) {
       console.log("[gg:add] H1: createCarts(...)");
@@ -114,6 +120,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
         {
           region_id: region.id,
           currency_code: "eur",
+          ...(salesChannelId ? { sales_channel_id: salesChannelId } : {}),
         } as any,
       ]);
       cart = created[0];
@@ -132,6 +139,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
         quantity: qty || 1,
         unit_price: price.unit_price, // must be integer (minor units)
         is_custom_price: true,
+        ...(salesChannelId ? { sales_channel_id: salesChannelId } : {}),
         metadata: {
           size,
           material,

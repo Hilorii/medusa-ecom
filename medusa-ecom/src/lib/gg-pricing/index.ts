@@ -25,7 +25,7 @@ export function ggLoadPricing(): GGPricingTable {
 /** Convert euro value to minor units (cents). */
 function eurToCents(value: number): number {
   // guard against floating point artifacts
-  return Math.round(value);
+  return Math.round(value * 100);
 }
 
 /** Clamp helper. */

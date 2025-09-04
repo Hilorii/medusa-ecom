@@ -24,7 +24,9 @@ export default async function OrderConfirmedPage(props: Props) {
   // Call finalize so uploaded artwork is moved from /uploads/tmp to /uploads/orders/{display_id}
   try {
     const MEDUSA_URL =
-      process.env.NEXT_PUBLIC_MEDUSA_URL || "http://localhost:9000"
+      process.env.NEXT_PUBLIC_MEDUSA_URL ||
+      process.env.MEDUSA_BACKEND_URL ||
+      "http://127.0.0.1:9000"
     const PAK = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
 
     await fetch(`${MEDUSA_URL}/store/designs/finalize`, {

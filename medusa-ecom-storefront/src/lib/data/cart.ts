@@ -277,8 +277,8 @@ export async function initiatePaymentSession(
         ...headers,
       }
 
-      // Try single-session route first
-      const urlSingle = `${BASE}/store/payment-collections/${paymentCollectionId}/sessions`
+      // PAYMENT-SESSIONS IS THE GOOD ONE - not sessions
+      const urlSingle = `${BASE}/store/payment-collections/${paymentCollectionId}/payment-sessions`
       let res = await fetch(urlSingle, {
         method: "POST",
         headers: commonHeaders,

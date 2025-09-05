@@ -280,43 +280,65 @@ export async function initiatePaymentSession(
       // PAYMENT-SESSIONS IS THE GOOD ONE - not sessions
       const urlSingle = `${BASE}/store/payment-collections/${paymentCollectionId}/payment-sessions`
 
-      // Proactively clear existing payment sessions to prevent
-      // backend errors like "Could not delete all payment sessions"
+      const sessionIds = new Set<string>()
+
       try {
-        const existingRes = await fetch(
-          `${BASE}/store/payment-collections/${paymentCollectionId}?fields=payment_sessions.id`,
+        const res = await fetch(
+          `${BASE}/store/carts/${cart.id}/payment-sessions`,
           {
             method: "GET",
             headers: commonHeaders,
             cache: "no-store",
           }
         )
-
-        if (existingRes.ok) {
-          const payload = await existingRes.json()
-          const sessions = payload.payment_collection?.payment_sessions ?? []
-
-          for (const session of sessions) {
-            const delUrls = [
-              `${BASE}/store/payment-collections/${paymentCollectionId}/payment-sessions/${session.id}`,
-              `${BASE}/store/carts/${cart.id}/payment-sessions/${session.id}`,
-            ]
-
-            for (const url of delUrls) {
-              try {
-                await fetch(url, {
-                  method: "DELETE",
-                  headers: commonHeaders,
-                  cache: "no-store",
-                })
-              } catch {
-                /* ignore cleanup errors */
-              }
-            }
+        if (res.ok) {
+          const json = await res.json()
+          for (const s of json.payment_sessions ?? []) {
+            if (s?.id) sessionIds.add(s.id)
           }
         }
       } catch {
-        /* ignore cleanup errors */
+        /* ignore */
+      }
+
+      // Also try payment-collection endpoint with expand to cover other versions
+      try {
+        const res = await fetch(
+          `${BASE}/store/payment-collections/${paymentCollectionId}?expand=payment_sessions`,
+          {
+            method: "GET",
+            headers: commonHeaders,
+            cache: "no-store",
+          }
+        )
+        if (res.ok) {
+          const json = await res.json()
+          for (const s of json.payment_collection?.payment_sessions ?? []) {
+            if (s?.id) sessionIds.add(s.id)
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+
+      // @ts-ignore
+      for (const id of sessionIds) {
+        const delUrls = [
+          `${BASE}/store/payment-collections/${paymentCollectionId}/payment-sessions/${id}`,
+          `${BASE}/store/carts/${cart.id}/payment-sessions/${id}`,
+        ]
+
+        for (const url of delUrls) {
+          try {
+            await fetch(url, {
+              method: "DELETE",
+              headers: commonHeaders,
+              cache: "no-store",
+            })
+          } catch {
+            /* ignore cleanup errors */
+          }
+        }
       }
       let res = await fetch(urlSingle, {
         method: "POST",

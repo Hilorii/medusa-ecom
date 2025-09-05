@@ -27,5 +27,10 @@ export default defineMiddlewares({
         sizeLimit: "15mb",
       },
     },
+    {
+      matcher: "/hooks/payment/*",
+      method: ["POST"],
+      bodyParser: { preserveRawBody: true },
+    },
   ],
 });

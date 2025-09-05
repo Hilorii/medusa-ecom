@@ -11,14 +11,49 @@ import PaymentContainer, {
 } from "@modules/checkout/components/payment-container"
 import Divider from "@modules/common/components/divider"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+
+/** Fetch providers on the client when none are passed via props */
+async function fetchPaymentProviders(regionId: string) {
+  // all comments in English
+  const RAW_BASE =
+    process.env.NEXT_PUBLIC_MEDUSA_URL ||
+    process.env.MEDUSA_BACKEND_URL ||
+    "http://localhost:9000"
+
+  const BASE = RAW_BASE.trim().replace(/\/+$/, "")
+  const PK = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
+
+  const url = `${BASE}/store/payment-providers?region_id=${encodeURIComponent(
+    regionId
+  )}`
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      "content-type": "application/json",
+      "x-publishable-api-key": PK,
+      // if you also pass sales channel header globally, add it here if needed:
+      // "x-medusa-sales-channel-id": process.env.NEXT_PUBLIC_MEDUSA_SALES_CHANNEL_ID || ""
+    },
+    cache: "no-store",
+  })
+
+  if (!res.ok) {
+    const msg = (await res.text()) || res.statusText
+    throw new Error(`Failed to list payment providers: ${msg}`)
+  }
+
+  const json = await res.json()
+  return (json?.payment_providers ?? []) as Array<{ id: string }>
+}
 
 const Payment = ({
   cart,
   availablePaymentMethods,
 }: {
   cart: any
-  availablePaymentMethods: any[]
+  availablePaymentMethods?: any[]
 }) => {
   const activeSession = cart.payment_collection?.payment_sessions?.find(
     (paymentSession: any) => paymentSession.status === "pending"
@@ -28,6 +63,39 @@ const Payment = ({
   const [error, setError] = useState<string | null>(null)
   const [cardBrand, setCardBrand] = useState<string | null>(null)
   const [cardComplete, setCardComplete] = useState(false)
+
+  // local list of methods (prefers prop, can hydrate via client fetch)
+  const [methods, setMethods] = useState<any[]>(
+    Array.isArray(availablePaymentMethods) ? availablePaymentMethods : []
+  )
+
+  // when props are empty, fetch providers on the client
+  const shouldFetchProviders = useMemo(
+    () =>
+      (!availablePaymentMethods || availablePaymentMethods.length === 0) &&
+      !!cart?.region_id,
+    [availablePaymentMethods, cart?.region_id]
+  )
+
+  useEffect(() => {
+    let alive = true
+    if (shouldFetchProviders) {
+      fetchPaymentProviders(cart.region_id)
+        .then((list) => {
+          if (!alive) return
+          setMethods(list)
+        })
+        .catch((e) => {
+          if (!alive) return
+          setError(e.message || "Failed to load payment methods")
+        })
+    }
+    return () => {
+      alive = false
+    }
+  }, [shouldFetchProviders, cart?.region_id])
+
+  // use pending session provider as initial selection (if any)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
     activeSession?.provider_id ?? ""
   )
@@ -37,16 +105,15 @@ const Payment = ({
   const pathname = usePathname()
 
   const isOpen = searchParams.get("step") === "payment"
-
   const isStripe = isStripeFunc(selectedPaymentMethod)
 
   const setPaymentMethod = async (method: string) => {
+    // switch provider and init stripe session to get client_secret
     setError(null)
     setSelectedPaymentMethod(method)
+
     if (isStripeFunc(method)) {
-      await initiatePaymentSession(cart, {
-        provider_id: method,
-      })
+      await initiatePaymentSession(cart, { provider_id: method })
     }
   }
 
@@ -60,7 +127,6 @@ const Payment = ({
     (name: string, value: string) => {
       const params = new URLSearchParams(searchParams)
       params.set(name, value)
-
       return params.toString()
     },
     [searchParams]
@@ -90,9 +156,7 @@ const Payment = ({
       if (!shouldInputCard) {
         return router.push(
           pathname + "?" + createQueryString("step", "review"),
-          {
-            scroll: false,
-          }
+          { scroll: false }
         )
       }
     } catch (err: any) {
@@ -134,15 +198,16 @@ const Payment = ({
           </Text>
         )}
       </div>
+
       <div>
         <div className={isOpen ? "block" : "hidden"}>
-          {!paidByGiftcard && availablePaymentMethods?.length && (
+          {!paidByGiftcard && methods?.length > 0 && (
             <>
               <RadioGroup
                 value={selectedPaymentMethod}
                 onChange={(value: string) => setPaymentMethod(value)}
               >
-                {availablePaymentMethods.map((paymentMethod) => (
+                {methods.map((paymentMethod) => (
                   <div key={paymentMethod.id}>
                     {isStripeFunc(paymentMethod.id) ? (
                       <StripeCardContainer
@@ -164,6 +229,12 @@ const Payment = ({
                 ))}
               </RadioGroup>
             </>
+          )}
+
+          {!paidByGiftcard && methods?.length === 0 && (
+            <Text className="text-ui-fg-subtle">
+              No payment methods available for this region.
+            </Text>
           )}
 
           {paidByGiftcard && (
@@ -253,6 +324,7 @@ const Payment = ({
           ) : null}
         </div>
       </div>
+
       <Divider className="mt-8" />
     </div>
   )

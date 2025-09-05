@@ -279,6 +279,45 @@ export async function initiatePaymentSession(
 
       // PAYMENT-SESSIONS IS THE GOOD ONE - not sessions
       const urlSingle = `${BASE}/store/payment-collections/${paymentCollectionId}/payment-sessions`
+
+      // Proactively clear existing payment sessions to prevent
+      // backend errors like "Could not delete all payment sessions"
+      try {
+        const existingRes = await fetch(
+          `${BASE}/store/payment-collections/${paymentCollectionId}?fields=payment_sessions.id`,
+          {
+            method: "GET",
+            headers: commonHeaders,
+            cache: "no-store",
+          }
+        )
+
+        if (existingRes.ok) {
+          const payload = await existingRes.json()
+          const sessions = payload.payment_collection?.payment_sessions ?? []
+
+          for (const session of sessions) {
+            const delUrls = [
+              `${BASE}/store/payment-collections/${paymentCollectionId}/payment-sessions/${session.id}`,
+              `${BASE}/store/carts/${cart.id}/payment-sessions/${session.id}`,
+            ]
+
+            for (const url of delUrls) {
+              try {
+                await fetch(url, {
+                  method: "DELETE",
+                  headers: commonHeaders,
+                  cache: "no-store",
+                })
+              } catch {
+                /* ignore cleanup errors */
+              }
+            }
+          }
+        }
+      } catch {
+        /* ignore cleanup errors */
+      }
       let res = await fetch(urlSingle, {
         method: "POST",
         headers: commonHeaders,
@@ -292,7 +331,7 @@ export async function initiatePaymentSession(
 
       // If not found, try batch route used by some versions
       if (res.status === 404) {
-        const urlBatch = `${BASE}/store/payment-collections/${paymentCollectionId}/sessions/batch`
+        const urlBatch = `${BASE}/store/payment-collections/${paymentCollectionId}/payment-sessions/batch`
         res = await fetch(urlBatch, {
           method: "POST",
           headers: commonHeaders,

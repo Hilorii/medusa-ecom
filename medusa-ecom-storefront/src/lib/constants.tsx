@@ -35,6 +35,14 @@ export const paymentInfoMap: Record<
 
 // This only checks if it is native stripe for card payments, it ignores the other stripe-based providers
 export const isStripe = (providerId?: string) => {
+  paymentInfoMap["pp_stripe-przelewy24_stripe"] = {
+    title: "Przelewy24",
+    icon: <CreditCard />,
+  }
+  paymentInfoMap["pp_stripe-blik_stripe"] = {
+    title: "BLIK",
+    icon: <CreditCard />,
+  }
   return providerId?.startsWith("pp_stripe_")
 }
 export const isPaypal = (providerId?: string) => {

@@ -667,7 +667,7 @@
   resolved "https://registry.npmjs.org/@medusajs/icons/-/icons-2.9.0.tgz"
   integrity sha512-qzFyX8f87WjLBFr23aly5F8hmN/camZ2oVcqmP1XBK4HqOWWxrPPjABePomQixwm7XGkfQHZf+B2rnyIyjwfKA==
 
-"@medusajs/js-sdk@latest":
+"@medusajs/js-sdk@2.8.8":
   version "2.8.8"
   resolved "https://registry.npmjs.org/@medusajs/js-sdk/-/js-sdk-2.8.8.tgz"
   integrity sha512-hFPWCo42faRiBlXCJXnwU5AKqdOAYFyZMvkPEzhV3nTytnY/bSm4qVDiGC/TmUMtaEftlNFz2ga5ZOuT4e9gEQ==

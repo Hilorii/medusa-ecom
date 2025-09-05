@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
-    "@medusajs/js-sdk": "latest",
+    "@medusajs/js-sdk": "2.8.8",
     "@medusajs/ui": "^4.0.19",
     "@radix-ui/react-accordion": "^1.2.1",
     "@stripe/react-stripe-js": "^1.7.2",

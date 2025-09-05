@@ -10,22 +10,35 @@ import {
   getCacheOptions,
   getCacheTag,
   getCartId,
-  removeCartId,
   setCartId,
 } from "./cookies"
 import { getRegion } from "./regions"
 
+/** Resolve storefront/base URL once (trim + strip trailing slash). */
+function getStoreBaseUrl() {
+  const RAW_BASE =
+    process.env.MEDUSA_BACKEND_URL ||
+    process.env.NEXT_PUBLIC_MEDUSA_URL ||
+    "http://localhost:9000"
+  return RAW_BASE.trim().replace(/\/+$/, "")
+}
+
+/** Prefer explicit sales channel via ENV; fall back to undefined (backend default). */
+function getDefaultSalesChannelId(): string | undefined {
+  return (
+    process.env.NEXT_PUBLIC_SALES_CHANNEL_ID ||
+    process.env.MEDUSA_SALES_CHANNEL_ID ||
+    process.env.SALES_CHANNEL_ID ||
+    undefined
+  )
+}
+
 /**
  * Retrieves a cart by its ID. If no ID is provided, it will use the cart ID from the cookies.
- * @param cartId - optional - The ID of the cart to retrieve.
- * @returns The cart object if found, or null if not found.
  */
 export async function retrieveCart(cartId?: string) {
   const id = cartId || (await getCartId())
-
-  if (!id) {
-    return null
-  }
+  if (!id) return null
 
   const headers = {
     ...(await getAuthHeaders()),
@@ -48,33 +61,41 @@ export async function retrieveCart(cartId?: string) {
 
 export async function getOrSetCart(countryCode: string) {
   const region = await getRegion(countryCode)
-
   if (!region) {
     throw new Error(`Region not found for country code: ${countryCode}`)
   }
 
   let cart = await retrieveCart()
+  const headers = { ...(await getAuthHeaders()) }
 
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
-
+  // Create new cart (inject sales_channel_id if available)
   if (!cart) {
-    const cartResp = await sdk.store.cart.create(
-      { region_id: region.id },
-      {},
-      headers
-    )
+    const salesChannelId = getDefaultSalesChannelId()
+    const payload: HttpTypes.StoreCreateCart = {
+      region_id: region.id,
+      ...(salesChannelId ? { sales_channel_id: salesChannelId } : {}),
+    }
+
+    const cartResp = await sdk.store.cart.create(payload, {}, headers)
     cart = cartResp.cart
 
     await setCartId(cart.id)
-
     const cartCacheTag = await getCacheTag("carts")
     revalidateTag(cartCacheTag)
   }
 
-  if (cart && cart?.region_id !== region.id) {
-    await sdk.store.cart.update(cart.id, { region_id: region.id }, {}, headers)
+  // Keep region / sales channel consistent
+  const updates: Partial<HttpTypes.StoreUpdateCart> = {}
+  if (cart.region_id !== region.id) {
+    updates.region_id = region.id
+  }
+  if (!cart.sales_channel_id) {
+    const salesChannelId = getDefaultSalesChannelId()
+    if (salesChannelId) updates.sales_channel_id = salesChannelId
+  }
+
+  if (Object.keys(updates).length) {
+    await sdk.store.cart.update(cart.id, updates, {}, headers)
     const cartCacheTag = await getCacheTag("carts")
     revalidateTag(cartCacheTag)
   }
@@ -84,14 +105,11 @@ export async function getOrSetCart(countryCode: string) {
 
 export async function updateCart(data: HttpTypes.StoreUpdateCart) {
   const cartId = await getCartId()
-
   if (!cartId) {
     throw new Error("No existing cart found, please create one before updating")
   }
 
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
+  const headers = { ...(await getAuthHeaders()) }
 
   return sdk.store.cart
     .update(cartId, data, {}, headers)
@@ -121,14 +139,11 @@ export async function addToCart({
   }
 
   const cart = await getOrSetCart(countryCode)
-
   if (!cart) {
     throw new Error("Error retrieving or creating cart")
   }
 
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
+  const headers = { ...(await getAuthHeaders()) }
 
   await sdk.store.cart
     .createLineItem(
@@ -157,19 +172,12 @@ export async function updateLineItem({
   lineId: string
   quantity: number
 }) {
-  if (!lineId) {
-    throw new Error("Missing lineItem ID when updating line item")
-  }
+  if (!lineId) throw new Error("Missing lineItem ID when updating line item")
 
   const cartId = await getCartId()
+  if (!cartId) throw new Error("Missing cart ID when updating line item")
 
-  if (!cartId) {
-    throw new Error("Missing cart ID when updating line item")
-  }
-
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
+  const headers = { ...(await getAuthHeaders()) }
 
   await sdk.store.cart
     .updateLineItem(cartId, lineId, { quantity }, {}, headers)
@@ -184,20 +192,14 @@ export async function updateLineItem({
 }
 
 export async function deleteLineItem(lineId: string) {
-  if (!lineId) {
-    throw new Error("Missing lineItem ID when deleting line item")
-  }
+  if (!lineId) throw new Error("Missing lineItem ID when deleting line item")
 
   const cartId = await getCartId()
+  if (!cartId) throw new Error("Missing cart ID when deleting line item")
 
-  if (!cartId) {
-    throw new Error("Missing cart ID when deleting line item")
-  }
+  const headers = { ...(await getAuthHeaders()) }
 
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
-
+  // FIX: this method accepts 2–3 args in your SDK; remove the empty {}.
   await sdk.store.cart
     .deleteLineItem(cartId, lineId, headers)
     .then(async () => {
@@ -217,9 +219,7 @@ export async function setShippingMethod({
   cartId: string
   shippingMethodId: string
 }) {
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
+  const headers = { ...(await getAuthHeaders()) }
 
   return sdk.store.cart
     .addShippingMethod(cartId, { option_id: shippingMethodId }, {}, headers)
@@ -233,17 +233,21 @@ export async function setShippingMethod({
 /**
  * Initialize a payment session for a given provider.
  * Tries SDK first, then falls back to REST routes to handle minor
- * differences across Medusa versions (e.g. /sessions vs /sessions/batch).
+ * differences across Medusa versions (e.g. /payment-sessions vs /sessions/batch).
  */
 export async function initiatePaymentSession(
   cart: HttpTypes.StoreCart,
   data: HttpTypes.StoreInitializePaymentSession
 ) {
-  const headers = {
-    ...(await getAuthHeaders()),
+  const headers = { ...(await getAuthHeaders()) }
+
+  if (!cart?.payment_collection?.id) {
+    throw new Error(
+      "Cart has no payment_collection. Ensure email + shipping method are set and cart total > 0."
+    )
   }
 
-  // 1) Try using the official JS SDK (preferred)
+  // Preferred path: SDK
   try {
     const resp = await sdk.store.payment.initiatePaymentSession(
       cart,
@@ -251,36 +255,21 @@ export async function initiatePaymentSession(
       {},
       headers
     )
-
     const cartCacheTag = await getCacheTag("carts")
     revalidateTag(cartCacheTag)
     return resp
   } catch (sdkErr: any) {
-    // 2) Fallback to REST endpoints to be resilient across versions
+    // Fallback via REST (version-agnostic)
     try {
-      const paymentCollectionId = cart.payment_collection?.id
-      if (!paymentCollectionId) {
-        throw new Error(
-          "Cart has no payment_collection. Make sure email + shipping method are set and cart total > 0."
-        )
-      }
-
-      // Build base URL safely
-      const RAW_BASE =
-        process.env.MEDUSA_BACKEND_URL ||
-        process.env.NEXT_PUBLIC_MEDUSA_URL ||
-        "http://localhost:9000"
-      const BASE = RAW_BASE.trim().replace(/\/+$/, "")
-
+      const paymentCollectionId = cart.payment_collection!.id
+      const BASE = getStoreBaseUrl()
       const commonHeaders: Record<string, string> = {
         "content-type": "application/json",
         ...headers,
       }
 
-      // PAYMENT-SESSIONS IS THE GOOD ONE - not sessions
-      const urlSingle = `${BASE}/store/payment-collections/${paymentCollectionId}/payment-sessions`
-
-      const sessionIds = new Set<string>()
+      // Gather provider_ids to clean previous sessions (best effort)
+      const providerIds = new Set<string>()
 
       try {
         const res = await fetch(
@@ -294,40 +283,30 @@ export async function initiatePaymentSession(
         if (res.ok) {
           const json = await res.json()
           for (const s of json.payment_sessions ?? []) {
-            if (s?.id) sessionIds.add(s.id)
+            if (s?.provider_id) providerIds.add(s.provider_id)
           }
         }
-      } catch {
-        /* ignore */
-      }
+      } catch {}
 
-      // Also try payment-collection endpoint with expand to cover other versions
       try {
         const res = await fetch(
           `${BASE}/store/payment-collections/${paymentCollectionId}?expand=payment_sessions`,
-          {
-            method: "GET",
-            headers: commonHeaders,
-            cache: "no-store",
-          }
+          { method: "GET", headers: commonHeaders, cache: "no-store" }
         )
         if (res.ok) {
           const json = await res.json()
           for (const s of json.payment_collection?.payment_sessions ?? []) {
-            if (s?.id) sessionIds.add(s.id)
+            if (s?.provider_id) providerIds.add(s.provider_id)
           }
         }
-      } catch {
-        /* ignore */
-      }
+      } catch {}
 
-      // @ts-ignore
-      for (const id of sessionIds) {
+      for (const pid of Array.from(providerIds)) {
         const delUrls = [
-          `${BASE}/store/payment-collections/${paymentCollectionId}/payment-sessions/${id}`,
-          `${BASE}/store/carts/${cart.id}/payment-sessions/${id}`,
+          `${BASE}/store/payment-collections/${paymentCollectionId}/payment-sessions/${pid}`,
+          `${BASE}/store/payment-collections/${paymentCollectionId}/sessions/${pid}`,
+          `${BASE}/store/carts/${cart.id}/payment-sessions/${pid}`,
         ]
-
         for (const url of delUrls) {
           try {
             await fetch(url, {
@@ -335,48 +314,70 @@ export async function initiatePaymentSession(
               headers: commonHeaders,
               cache: "no-store",
             })
-          } catch {
-            /* ignore cleanup errors */
-          }
+          } catch {}
         }
       }
+
+      // Primary (newer) route
+      const urlSingle = `${BASE}/store/payment-collections/${paymentCollectionId}/payment-sessions`
       let res = await fetch(urlSingle, {
         method: "POST",
         headers: commonHeaders,
         cache: "no-store",
         body: JSON.stringify({
           provider_id: data.provider_id,
-          // Provider-specific extras can go into data.data
           data: data.data ?? {},
         }),
       })
 
-      // If not found, try batch route used by some versions
       if (res.status === 404) {
-        const urlBatch = `${BASE}/store/payment-collections/${paymentCollectionId}/payment-sessions/batch`
-        res = await fetch(urlBatch, {
+        // Try batch
+        let url = `${BASE}/store/payment-collections/${paymentCollectionId}/payment-sessions/batch`
+        res = await fetch(url, {
           method: "POST",
           headers: commonHeaders,
           cache: "no-store",
           body: JSON.stringify({
             sessions: [
-              {
-                provider_id: data.provider_id,
-                data: data.data ?? {},
-              },
+              { provider_id: data.provider_id, data: data.data ?? {} },
             ],
           }),
         })
+
+        if (res.status === 404) {
+          // Legacy aliases
+          url = `${BASE}/store/payment-collections/${paymentCollectionId}/sessions`
+          res = await fetch(url, {
+            method: "POST",
+            headers: commonHeaders,
+            cache: "no-store",
+            body: JSON.stringify({
+              provider_id: data.provider_id,
+              data: data.data ?? {},
+            }),
+          })
+
+          if (res.status === 404) {
+            url = `${BASE}/store/payment-collections/${paymentCollectionId}/sessions/batch`
+            res = await fetch(url, {
+              method: "POST",
+              headers: commonHeaders,
+              cache: "no-store",
+              body: JSON.stringify({
+                sessions: [
+                  { provider_id: data.provider_id, data: data.data ?? {} },
+                ],
+              }),
+            })
+          }
+        }
       }
 
       if (!res.ok) {
         let text = ""
         try {
           text = await res.text()
-        } catch {
-          /* ignore */
-        }
-        // Throw a readable error – this is what you saw in the console
+        } catch {}
         throw new Error(
           `fallback ${res.url.replace(BASE, "")} failed ${res.status} ${
             res.statusText
@@ -385,13 +386,10 @@ export async function initiatePaymentSession(
       }
 
       const payload = await res.json()
-
       const cartCacheTag = await getCacheTag("carts")
       revalidateTag(cartCacheTag)
-
       return payload
     } catch (fallbackErr: any) {
-      // Surface the real reason instead of "Unknown error"
       const msg =
         fallbackErr?.message ||
         sdkErr?.message ||
@@ -403,14 +401,9 @@ export async function initiatePaymentSession(
 
 export async function applyPromotions(codes: string[]) {
   const cartId = await getCartId()
+  if (!cartId) throw new Error("No existing cart found")
 
-  if (!cartId) {
-    throw new Error("No existing cart found")
-  }
-
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
+  const headers = { ...(await getAuthHeaders()) }
 
   return sdk.store.cart
     .update(cartId, { promo_codes: codes }, {}, headers)
@@ -448,17 +441,13 @@ export async function submitPromotionForm(
   }
 }
 
-// TODO: Pass a POJO instead of a form entity here
 export async function setAddresses(currentState: unknown, formData: FormData) {
   try {
-    if (!formData) {
-      throw new Error("No form data found when setting addresses")
-    }
-    const cartId = getCartId() // promise is truthy, but updateCart reads from cookie anyway
+    if (!formData) throw new Error("No form data found when setting addresses")
 
-    if (!cartId) {
+    const cartId = await getCartId()
+    if (!cartId)
       throw new Error("No existing cart found when setting addresses")
-    }
 
     const data = {
       shipping_address: {
@@ -492,6 +481,7 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
         province: formData.get("billing_address.province"),
         phone: formData.get("billing_address.phone"),
       }
+
     await updateCart(data)
   } catch (e: any) {
     return e.message
@@ -504,16 +494,12 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
 
 /**
  * Updates the countrycode param and revalidates the regions cache
- * @param regionId
- * @param countryCode
  */
 export async function updateRegion(countryCode: string, currentPath: string) {
   const cartId = await getCartId()
   const region = await getRegion(countryCode)
-
-  if (!region) {
+  if (!region)
     throw new Error(`Region not found for country code: ${countryCode}`)
-  }
 
   if (cartId) {
     await updateCart({ region_id: region.id })
@@ -532,12 +518,8 @@ export async function updateRegion(countryCode: string, currentPath: string) {
 
 export async function listCartOptions() {
   const cartId = await getCartId()
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
-  const next = {
-    ...(await getCacheOptions("shippingOptions")),
-  }
+  const headers = { ...(await getAuthHeaders()) }
+  const next = { ...(await getCacheOptions("shippingOptions")) }
 
   return await sdk.client.fetch<{
     shipping_options: HttpTypes.StoreCartShippingOption[]

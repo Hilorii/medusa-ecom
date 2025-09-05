@@ -14,22 +14,27 @@ module.exports = defineConfig({
     },
   },
   modules: [
+    // gg: Stripe payments (v2 module)
     {
-      resolve: "./src/modules/brand",
-    },
-    {
-      resolve: "@medusajs/medusa/payment",
+      resolve: "@medusajs/payment",
       options: {
         providers: [
           {
-            resolve: "@medusajs/medusa/payment-stripe",
+            resolve: "@medusajs/payment-stripe",
             id: "stripe",
             options: {
               apiKey: process.env.STRIPE_API_KEY,
+              webhookSecret: process.env.STRIPE_WEBHOOK_SECRET, // optional now
+              capture: true,
+              automatic_payment_methods: true,
             },
           },
+          // tutaj możesz dodać kolejne providery Stripe (P24/iDEAL/Bancontact)
         ],
       },
     },
+
+    // gg: Twój moduł
+    { resolve: "./src/modules/brand" },
   ],
 });

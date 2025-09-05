@@ -230,6 +230,11 @@ export async function setShippingMethod({
     .catch(medusaError)
 }
 
+/**
+ * Initialize a payment session for a given provider.
+ * Tries SDK first, then falls back to REST routes to handle minor
+ * differences across Medusa versions (e.g. /sessions vs /sessions/batch).
+ */
 export async function initiatePaymentSession(
   cart: HttpTypes.StoreCart,
   data: HttpTypes.StoreInitializePaymentSession
@@ -238,14 +243,101 @@ export async function initiatePaymentSession(
     ...(await getAuthHeaders()),
   }
 
-  return sdk.store.payment
-    .initiatePaymentSession(cart, data, {}, headers)
-    .then(async (resp) => {
+  // 1) Try using the official JS SDK (preferred)
+  try {
+    const resp = await sdk.store.payment.initiatePaymentSession(
+      cart,
+      data,
+      {},
+      headers
+    )
+
+    const cartCacheTag = await getCacheTag("carts")
+    revalidateTag(cartCacheTag)
+    return resp
+  } catch (sdkErr: any) {
+    // 2) Fallback to REST endpoints to be resilient across versions
+    try {
+      const paymentCollectionId = cart.payment_collection?.id
+      if (!paymentCollectionId) {
+        throw new Error(
+          "Cart has no payment_collection. Make sure email + shipping method are set and cart total > 0."
+        )
+      }
+
+      // Build base URL safely
+      const RAW_BASE =
+        process.env.MEDUSA_BACKEND_URL ||
+        process.env.NEXT_PUBLIC_MEDUSA_URL ||
+        "http://localhost:9000"
+      const BASE = RAW_BASE.trim().replace(/\/+$/, "")
+
+      const commonHeaders: Record<string, string> = {
+        "content-type": "application/json",
+        ...headers,
+      }
+
+      // Try single-session route first
+      const urlSingle = `${BASE}/store/payment-collections/${paymentCollectionId}/sessions`
+      let res = await fetch(urlSingle, {
+        method: "POST",
+        headers: commonHeaders,
+        cache: "no-store",
+        body: JSON.stringify({
+          provider_id: data.provider_id,
+          // Provider-specific extras can go into data.data
+          data: data.data ?? {},
+        }),
+      })
+
+      // If not found, try batch route used by some versions
+      if (res.status === 404) {
+        const urlBatch = `${BASE}/store/payment-collections/${paymentCollectionId}/sessions/batch`
+        res = await fetch(urlBatch, {
+          method: "POST",
+          headers: commonHeaders,
+          cache: "no-store",
+          body: JSON.stringify({
+            sessions: [
+              {
+                provider_id: data.provider_id,
+                data: data.data ?? {},
+              },
+            ],
+          }),
+        })
+      }
+
+      if (!res.ok) {
+        let text = ""
+        try {
+          text = await res.text()
+        } catch {
+          /* ignore */
+        }
+        // Throw a readable error – this is what you saw in the console
+        throw new Error(
+          `fallback ${res.url.replace(BASE, "")} failed ${res.status} ${
+            res.statusText
+          } — ${text || "Unknown"}`
+        )
+      }
+
+      const payload = await res.json()
+
       const cartCacheTag = await getCacheTag("carts")
       revalidateTag(cartCacheTag)
-      return resp
-    })
-    .catch(medusaError)
+
+      return payload
+    } catch (fallbackErr: any) {
+      // Surface the real reason instead of "Unknown error"
+      const msg =
+        fallbackErr?.message ||
+        sdkErr?.message ||
+        "Failed to initiate payment session"
+      throw new Error(msg)
+    }
+  }
 }
 
 export async function applyPromotions(codes: string[]) {

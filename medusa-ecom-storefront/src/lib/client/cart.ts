@@ -23,8 +23,6 @@ type StoreCart = {
     shipping_option_id?: string
     shipping_option?: { id: string }
   }>
-  payment_sessions?: Array<{ id: string; provider_id: string }>
-  payment_session?: { id: string; provider_id: string } | null
 }
 
 // ----------------------- shared helpers -----------------------
@@ -44,10 +42,6 @@ function storeHeaders(): Record<string, string> {
   const pak = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
   if (pak) headers["x-publishable-api-key"] = pak
   return headers
-}
-
-function safeTotal(cart: StoreCart) {
-  return cart.total ?? cart.total_amount ?? 0
 }
 
 function optionPrice(o: StoreShippingOption) {
@@ -236,5 +230,15 @@ export async function placeOrder(
     throw new Error(msg)
   }
 
-  return (await res.json()) as CompleteCartResponse
+  const data = (await res.json()) as CompleteCartResponse
+
+  if (data.type === "order") {
+    try {
+      await fetch("/api/gg/cart/reset", { method: "POST" })
+    } catch {
+      /* ignore cookie reset failures */
+    }
+  }
+
+  return data
 }

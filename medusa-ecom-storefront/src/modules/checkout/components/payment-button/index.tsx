@@ -8,6 +8,7 @@ import { Button } from "@medusajs/ui"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
 import React, { useState } from "react"
 import ErrorMessage from "../error-message"
+import { useRouter, useParams } from "next/navigation"
 
 type PaymentButtonProps = {
   cart: HttpTypes.StoreCart
@@ -61,10 +62,19 @@ const StripePaymentButton = ({
 }) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const router = useRouter()
+  const { countryCode } = useParams() as { countryCode: string }
 
   const onPaymentCompleted = async () => {
     // ⬇️ Use cart.id when placing the order
     await placeOrder(cart.id)
+      .then((res) => {
+        if (res.type === "order") {
+          router.push(`/${countryCode}/order/${res.order.id}/confirmed`)
+        } else {
+          router.refresh()
+        }
+      })
       .catch((err) => {
         setErrorMessage(err.message)
       })
@@ -169,10 +179,19 @@ const ManualTestPaymentButton = ({
 }) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const router = useRouter()
+  const { countryCode } = useParams() as { countryCode: string }
 
   const onPaymentCompleted = async () => {
     // ⬇️ Use cart.id when placing the order
     await placeOrder(cart.id)
+      .then((res) => {
+        if (res.type === "order") {
+          router.push(`/${countryCode}/order/${res.order.id}/confirmed`)
+        } else {
+          router.refresh()
+        }
+      })
       .catch((err) => {
         setErrorMessage(err.message)
       })

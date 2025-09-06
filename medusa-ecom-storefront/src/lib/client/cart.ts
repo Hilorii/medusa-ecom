@@ -234,7 +234,10 @@ export async function placeOrder(
 
   if (data.type === "order") {
     try {
-      await fetch("/api/gg/cart/reset", { method: "POST" })
+      await fetch("/api/gg/cart/reset", {
+        method: "POST",
+        credentials: "include",
+      })
     } catch {
       /* ignore cookie reset failures */
     }

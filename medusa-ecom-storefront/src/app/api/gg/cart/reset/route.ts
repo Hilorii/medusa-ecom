@@ -4,8 +4,18 @@ import { revalidateTag } from "next/cache"
 
 export async function POST() {
   const res = NextResponse.json({ ok: true })
+  // Clear any lingering cart cookies so new sessions start fresh.
+  res.cookies.set({
+    name: "cart_id",
+    value: "",
+    path: "/",
+    maxAge: -1,
+  })
 
   res.cookies.set("_medusa_cart_id", "", {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
     maxAge: -1,
     path: "/",
   })

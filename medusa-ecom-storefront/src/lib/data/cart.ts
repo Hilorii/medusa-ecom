@@ -33,6 +33,86 @@ function getDefaultSalesChannelId(): string | undefined {
   )
 }
 
+/** Convenience: re-fetch the latest cart from the backend. */
+async function refreshCart(id: string, headers: Record<string, string>) {
+  return sdk.client
+    .fetch<HttpTypes.StoreCartResponse>(`/store/carts/${id}`, {
+      method: "GET",
+      query: {
+        fields:
+          "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, total, subtotal, tax_total, shipping_total, shipping_subtotal, discount_total, gift_card_total, +items.total, *promotions, +shipping_methods.name, *payment_collection, +payment_collection.payment_sessions",
+      },
+      headers,
+      cache: "no-store",
+    })
+    .then(({ cart }) => cart)
+}
+
+/**
+ * Ensure a payment_collection exists for the given cart.
+ * Tries the "current" route first, then falls back to legacy aliases to be version-agnostic.
+ * Returns the (possibly re-fetched) cart with payment_collection present.
+ */
+async function ensurePaymentCollection(
+  cart: HttpTypes.StoreCart,
+  headers: Record<string, string>
+): Promise<HttpTypes.StoreCart> {
+  if (cart?.payment_collection?.id) {
+    return cart
+  }
+
+  const BASE = getStoreBaseUrl()
+  const commonHeaders: Record<string, string> = {
+    "content-type": "application/json",
+    ...headers,
+  }
+
+  // Try to create via multiple possible endpoints; ignore 409 if it already exists on server.
+  const candidates: Array<{ url: string; body?: any }> = [
+    // Newer-style cart-scoped creation
+    { url: `${BASE}/store/carts/${cart.id}/payment-collections`, body: {} },
+    // Direct creation with explicit cart_id
+    { url: `${BASE}/store/payment-collections`, body: { cart_id: cart.id } },
+    // Another legacy alias (if any)
+    { url: `${BASE}/store/carts/${cart.id}/payment-collection`, body: {} },
+  ]
+
+  let created = false
+  for (const c of candidates) {
+    try {
+      const res = await fetch(c.url, {
+        method: "POST",
+        headers: commonHeaders,
+        cache: "no-store",
+        body: JSON.stringify(c.body ?? {}),
+      })
+      if (res.ok || res.status === 409) {
+        created = true
+        break
+      }
+    } catch {
+      // swallow and try next candidate
+    }
+  }
+
+  // Regardless of creation success/failure, re-fetch to see the current state.
+  const fresh = await refreshCart(cart.id, headers)
+  if (fresh?.payment_collection?.id) {
+    return fresh
+  }
+
+  // If creation didn't materialize, give a helpful error containing preconditions.
+  if (!created) {
+    throw new Error(
+      "Failed to create payment_collection. Ensure email + shipping method are set and cart total > 0."
+    )
+  }
+
+  throw new Error(
+    "payment_collection was created but not visible on cart. Try reloading and retrying."
+  )
+}
+
 /**
  * Retrieves a cart by its ID. If no ID is provided, it will use the cart ID from the cookies.
  */
@@ -50,7 +130,7 @@ export async function retrieveCart(cartId?: string) {
       method: "GET",
       query: {
         fields:
-          "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, total, subtotal, tax_total, shipping_total, shipping_subtotal, discount_total, gift_card_total, +items.total, *promotions, +shipping_methods.name",
+          "*items, *region, *items.product, *items.variant, *items.thumbnail, *items.metadata, total, subtotal, tax_total, shipping_total, shipping_subtotal, discount_total, gift_card_total, +items.total, *promotions, +shipping_methods.name, *payment_collection, +payment_collection.payment_sessions",
       },
       headers,
       cache: "no-store",
@@ -98,6 +178,7 @@ export async function getOrSetCart(countryCode: string) {
     await sdk.store.cart.update(cart.id, updates, {}, headers)
     const cartCacheTag = await getCacheTag("carts")
     revalidateTag(cartCacheTag)
+    cart = await refreshCart(cart.id, headers)
   }
 
   return cart
@@ -199,7 +280,7 @@ export async function deleteLineItem(lineId: string) {
 
   const headers = { ...(await getAuthHeaders()) }
 
-  // FIX: this method accepts 2–3 args in your SDK; remove the empty {}.
+  // This SDK method in your setup accepts (cartId, lineId, headers)
   await sdk.store.cart
     .deleteLineItem(cartId, lineId, headers)
     .then(async () => {
@@ -232,20 +313,18 @@ export async function setShippingMethod({
 
 /**
  * Initialize a payment session for a given provider.
- * Tries SDK first, then falls back to REST routes to handle minor
- * differences across Medusa versions (e.g. /payment-sessions vs /sessions/batch).
+ * If the cart has no payment_collection yet, it will be created automatically (multi-endpoint fallback).
+ * Then it tries SDK first, and falls back to REST routes to handle differences across Medusa versions.
  */
 export async function initiatePaymentSession(
-  cart: HttpTypes.StoreCart,
+  cartInput: HttpTypes.StoreCart,
   data: HttpTypes.StoreInitializePaymentSession
 ) {
   const headers = { ...(await getAuthHeaders()) }
 
-  if (!cart?.payment_collection?.id) {
-    throw new Error(
-      "Cart has no payment_collection. Ensure email + shipping method are set and cart total > 0."
-    )
-  }
+  // Ensure we have a fresh cart (with payment_collection if possible)
+  let cart = cartInput
+  cart = await ensurePaymentCollection(cart, headers)
 
   // Preferred path: SDK
   try {
@@ -261,7 +340,13 @@ export async function initiatePaymentSession(
   } catch (sdkErr: any) {
     // Fallback via REST (version-agnostic)
     try {
-      const paymentCollectionId = cart.payment_collection!.id
+      // Make sure we still have the latest payment_collection id
+      cart = await refreshCart(cart.id, headers)
+      if (!cart?.payment_collection?.id) {
+        throw new Error("Cart still has no payment_collection after creation.")
+      }
+
+      const paymentCollectionId = cart.payment_collection.id
       const BASE = getStoreBaseUrl()
       const commonHeaders: Record<string, string> = {
         "content-type": "application/json",

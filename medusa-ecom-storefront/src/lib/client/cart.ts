@@ -208,45 +208,137 @@ async function ensureMethodsForAllProfiles(cartId: string) {
 // ----------------------- payment sessions -----------------------
 
 async function createPaymentSessions(cartId: string): Promise<StoreCart> {
-  const res = await fetch(
-    `${baseUrl()}/store/carts/${cartId}/payment-sessions`,
-    {
-      method: "POST",
-      headers: storeHeaders(),
-      credentials: "include",
-    }
-  )
+  const headers = storeHeaders()
+
+  // Legacy path - try first for backwards compatibility
+  let res = await fetch(`${baseUrl()}/store/carts/${cartId}/payment-sessions`, {
+    method: "POST",
+    headers,
+    credentials: "include",
+  })
+
+  if (res.status === 404) {
+    // Newer versions use payment collections; attempt that flow
+    try {
+      const cartRes = await fetch(`${baseUrl()}/store/carts/${cartId}`, {
+        headers,
+        credentials: "include",
+      })
+      if (cartRes.ok) {
+        const { cart } = (await cartRes.json()) as { cart: any }
+        const pcId = cart?.payment_collection?.id
+        if (pcId) {
+          res = await fetch(
+            `${baseUrl()}/store/payment-collections/${pcId}/payment-sessions`,
+            { method: "POST", headers, credentials: "include" }
+          )
+          if (res.ok) {
+            const updated = await fetch(`${baseUrl()}/store/carts/${cartId}`, {
+              headers,
+              credentials: "include",
+            })
+            if (updated.ok) {
+              return (await updated.json()).cart as StoreCart
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
   if (!res.ok) {
     const t = await res.text().catch(() => "")
     throw new Error(
       `Create payment sessions failed: ${res.status}${t ? " - " + t : ""}`
     )
   }
-  const { cart } = (await res.json()) as { cart: StoreCart }
-  return cart
+  // Legacy response contains { cart }; otherwise fetch cart again
+  try {
+    const { cart } = (await res.json()) as { cart: StoreCart }
+    if (cart) return cart
+  } catch {}
+
+  const final = await fetch(`${baseUrl()}/store/carts/${cartId}`, {
+    headers,
+    credentials: "include",
+  })
+  if (!final.ok) {
+    const t = await final.text().catch(() => "")
+    throw new Error(
+      `Create payment sessions failed: ${final.status}${t ? " - " + t : ""}`
+    )
+  }
+  return (await final.json()).cart as StoreCart
 }
 
 async function setPaymentSession(
   cartId: string,
   providerId: string
 ): Promise<StoreCart> {
-  const res = await fetch(
-    `${baseUrl()}/store/carts/${cartId}/payment-session`,
-    {
-      method: "POST",
-      headers: storeHeaders(),
-      credentials: "include",
-      body: JSON.stringify({ provider_id: providerId }),
-    }
-  )
+  const headers = storeHeaders()
+  let res = await fetch(`${baseUrl()}/store/carts/${cartId}/payment-session`, {
+    method: "POST",
+    headers,
+    credentials: "include",
+    body: JSON.stringify({ provider_id: providerId }),
+  })
+
+  if (res.status === 404) {
+    // Attempt new payment collection route
+    try {
+      const cartRes = await fetch(`${baseUrl()}/store/carts/${cartId}`, {
+        headers,
+        credentials: "include",
+      })
+      if (cartRes.ok) {
+        const { cart } = (await cartRes.json()) as { cart: any }
+        const pcId = cart?.payment_collection?.id
+        if (pcId) {
+          res = await fetch(
+            `${baseUrl()}/store/payment-collections/${pcId}/payment-session`,
+            {
+              method: "POST",
+              headers,
+              credentials: "include",
+              body: JSON.stringify({ provider_id: providerId }),
+            }
+          )
+          if (res.ok) {
+            const updated = await fetch(`${baseUrl()}/store/carts/${cartId}`, {
+              headers,
+              credentials: "include",
+            })
+            if (updated.ok) {
+              return (await updated.json()).cart as StoreCart
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
   if (!res.ok) {
     const t = await res.text().catch(() => "")
     throw new Error(
       `Set payment session failed: ${res.status}${t ? " - " + t : ""}`
     )
   }
-  const { cart } = (await res.json()) as { cart: StoreCart }
-  return cart
+  try {
+    const { cart } = (await res.json()) as { cart: StoreCart }
+    if (cart) return cart
+  } catch {}
+
+  const final = await fetch(`${baseUrl()}/store/carts/${cartId}`, {
+    headers,
+    credentials: "include",
+  })
+  if (!final.ok) {
+    const t = await final.text().catch(() => "")
+    throw new Error(
+      `Set payment session failed: ${final.status}${t ? " - " + t : ""}`
+    )
+  }
+  return (await final.json()).cart as StoreCart
 }
 
 function pickProviderId(cart: StoreCart): string | null {

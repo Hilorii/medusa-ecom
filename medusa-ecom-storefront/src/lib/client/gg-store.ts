@@ -164,6 +164,14 @@ export function addDesignToCart(body: {
   })
 }
 
+/** POST finalize uploads for a completed order */
+export function finalizeDesign(body: { order_id: string }) {
+  return jfetch<any>("/store/designs/finalize", {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
+}
+
 /** Tell our Next server to set the cart cookie (so the rest of the app sees the same cart) */
 export async function setCartCookie(cartId: string) {
   // This hits our own Next API, same origin – no CORS issues.

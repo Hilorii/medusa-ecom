@@ -109,9 +109,12 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
     // G) Reuse or create cart (guest flow)
     console.log("[gg:add] H: listCarts(region_id, sales_channel_id)");
+
     const existing = await cartModule.listCarts({
       region_id: region.id,
       ...(salesChannelId ? { sales_channel_id: salesChannelId } : {}),
+      // @ts-ignore
+      completed_at: null,
     });
     let cart = existing?.[0];
     if (!cart) {

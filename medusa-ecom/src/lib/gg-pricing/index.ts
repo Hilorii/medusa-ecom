@@ -25,7 +25,8 @@ export function ggLoadPricing(): GGPricingTable {
 /** Convert euro value to minor units (cents). */
 function eurToCents(value: number): number {
   // guard against floating point artifacts
-  return Math.round(value * 100);
+  // value * 100 here if needed for Medusa
+  return Math.round(value);
 }
 
 /** Clamp helper. */

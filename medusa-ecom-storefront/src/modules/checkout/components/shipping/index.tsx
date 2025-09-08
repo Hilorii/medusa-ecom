@@ -12,6 +12,7 @@ import Divider from "@modules/common/components/divider"
 import MedusaRadio from "@modules/common/components/radio"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
+import { GgShippingEta } from "../delivery-time/index"
 
 const PICKUP_OPTION_ON = "__PICKUP_ON"
 const PICKUP_OPTION_OFF = "__PICKUP_OFF"
@@ -188,9 +189,10 @@ const Shipping: React.FC<ShippingProps> = ({
               <span className="font-medium txt-medium text-ui-fg-base">
                 Shipping method
               </span>
-              <span className="mb-4 text-ui-fg-muted txt-medium">
-                How would you like you order delivered
-              </span>
+              {/*<span className="mb-4 text-ui-fg-muted txt-medium">*/}
+              {/*  How would you like you order delivered*/}
+              {/*</span>*/}
+              <GgShippingEta className="ml-1 mt-1 mb-3" />
             </div>
             <div data-testid="delivery-options-container">
               <div className="pb-8 md:pt-0 pt-2">

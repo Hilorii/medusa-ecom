@@ -1,0 +1,194 @@
+.gg-gallery-page {
+    display: grid;
+    gap: 1.25rem;
+    padding: 1.5rem 1rem 3rem;
+    margin-top: 100px;
+}
+
+
+.gg-gallery-header {
+    display: grid;
+    gap: 0.4rem;
+}
+
+
+.gg-gallery-title {
+    font-size: clamp(1.6rem, 1.2rem + 2vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+
+.gg-gallery-subtitle {
+    color: var(--muted-foreground, #6b7280);
+}
+
+
+/* Responsive, fluid grid */
+.gg-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+
+/* Individual card */
+.gg-gallery-card {
+    position: relative;
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.05));
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 1.25rem;
+    overflow: hidden;
+    cursor: pointer;
+    transform: translateZ(0);
+    transition: box-shadow 200ms ease, transform 200ms ease, border-color 200ms ease;
+}
+
+/* Image wrapper uses aspect-ratio for consistent tiles */
+.gg-gallery-media {
+    position: relative;
+    aspect-ratio: 4 / 3;
+}
+
+
+/* Next.js Image element */
+.gg-gallery-img {
+    object-fit: cover;
+}
+
+
+/* Interactive hover overlay */
+.gg-gallery-overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: end;
+    padding: 0.6rem 0.8rem;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 50%, rgba(0,0,0,0.35));
+    opacity: 0;
+    transition: opacity 200ms ease;
+}
+
+
+.gg-gallery-zoom {
+    color: white;
+    font-size: 0.85rem;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 999px;
+    padding: 0.35rem 0.65rem;
+}
+
+
+/* Card interactions */
+.gg-gallery-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    border-color: rgba(0,0,0,0.12);
+}
+
+
+.gg-gallery-card:hover .gg-gallery-overlay {
+    opacity: 1;
+}
+/* Empty state */
+.gg-gallery-empty {
+    display: grid;
+    place-items: center;
+    min-height: 40vh;
+    color: var(--muted-foreground, #6b7280);
+}
+
+/* Lightbox */
+.gg-gallery-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(0,0,0,0.86);
+    display: grid;
+    place-items: center;
+    animation: gg-fade-in 150ms ease;
+}
+
+.gg-gallery-stage {
+    position: relative;
+    width: min(92vw, 1200px);
+    height: min(82vh, 900px);
+}
+
+
+.gg-gallery-stage-img {
+    object-fit: contain;
+}
+
+
+.gg-gallery-counter {
+    position: absolute;
+    right: 0.75rem;
+    bottom: 0.6rem;
+    color: white;
+    font-size: 0.9rem;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+
+/* Close + nav buttons */
+.gg-gallery-close,
+.gg-gallery-nav {
+    position: absolute;
+    z-index: 61;
+    border: none;
+    background: rgba(255,255,255,0.12);
+    color: white;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: background 150ms ease, transform 150ms ease;
+}
+.gg-gallery-close {
+    top: 1rem;
+    right: 1rem;
+}
+
+
+.gg-gallery-prev {
+    left: 1rem;
+}
+
+
+.gg-gallery-next {
+    right: 1rem;
+}
+
+
+.gg-gallery-nav:hover,
+.gg-gallery-close:hover {
+    background: rgba(255,255,255,0.2);
+    transform: scale(1.03);
+}
+
+
+@keyframes gg-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .gg-gallery-card,
+    .gg-gallery-overlay,
+    .gg-gallery-lightbox,
+    .gg-gallery-nav,
+    .gg-gallery-close {
+        transition: none !important;
+    }
+}

@@ -2,6 +2,7 @@ import { getBaseURL } from "@lib/util/env"
 import { Metadata } from "next"
 import "styles/globals.css"
 import { Montserrat } from "next/font/google"
+import CookieConsent from "@modules/common/components/cookie-consent"
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -21,6 +22,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
         className={`${montserrat.variable} font-sans antialiased min-h-dvh flex flex-col`}
       >
         <main className="relative">{props.children}</main>
+        <CookieConsent />
       </body>
     </html>
   )

@@ -136,8 +136,11 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     console.log("[gg:add] I: addLineItems");
     await cartModule.addLineItems(cart.id, [
       {
-        title: "Custom", // keep stable title; UI shows composition separately
+        title: "Custom LED Panel", // keep stable title; UI shows composition separately
         product_id: product.id,
+        product_title: product.title,
+        subtitle: product.subtitle,
+        thumbnail: product.thumbnail,
         variant_id: variant.id,
         quantity: qty || 1,
         unit_price: price.unit_price, // must be integer (minor units)

@@ -12,16 +12,18 @@ import {
 } from "@lib/client/gg-store"
 
 /**
- * Integrates the configurator with Medusa v2 endpoints:
+ * Medusa v2 integrations:
  * - GET  /store/designs/config
  * - POST /store/designs/price
  * - POST /store/designs/upload
  * - POST /store/designs/add
- * - POST /api/gg/cart/set  (Next server route to persist cart cookie)
+ * - POST /api/gg/cart/set (cookies persist)
  *
- * Notes:
- * - UI "flavor" maps to backend "material"
- * - Artwork upload expects a data URL (data:image/...;base64,...)
+ * Key change in this version:
+ * - Colors are disabled based on the selected material (flavor).
+ * - Materials are never disabled.
+ * - On material pick, color is reset to force a valid combo.
+ * - Disabled colors show a tooltip: "Cant use that color with that material".
  */
 
 // ---------------- Types ----------------
@@ -48,6 +50,17 @@ type SizeDef = OptionCommon & { wCm: number; hCm: number; basePrice: number }
 type FlavorDef = OptionCommon & { priceDelta: number; intensity?: number }
 type ColorDef = OptionCommon & { swatch: string; hue: number }
 
+// ---------------- Incompatibility map ----------------
+
+/**
+ * Define incompatible color sets per material (flavor).
+ * Extend this map as needed.
+ */
+const INCOMPATIBLE: Record<string, string[]> = {
+  galaxy: ["white"],
+  // example: "shadow": ["green", "red"]
+}
+
 // ---------------- Utils ----------------
 
 const STORAGE_KEY = "design-your-own-v4"
@@ -56,28 +69,11 @@ function cx(...c: (string | false | undefined)[]) {
   return c.filter(Boolean).join(" ")
 }
 
-/** Local rule helper (kept simple; can be moved server-side later). */
-function isOptionDisabled(
-  stepId: StepId,
-  optionId: string,
-  sel: Selections,
-  rules: any[]
-) {
-  for (const rule of rules) {
-    const whenKey = Object.keys(rule.when)[0] as keyof typeof rule.when
-    const whenVal = (rule.when as any)[whenKey]
-    const matches =
-      (whenKey === "flavor" && sel.flavor === whenVal) ||
-      (whenKey === "color" && sel.color === whenVal) ||
-      (whenKey === "size" && sel.size === whenVal)
-
-    if (!matches) continue
-
-    const disallow = rule.disallow as unknown as Record<string, string[]>
-    const blocked = disallow[stepId]?.includes(optionId)
-    if (blocked) return true
-  }
-  return false
+/** Returns true if a given color is blocked by the selected flavor. */
+function isColorBlockedByFlavor(flavorId?: string, colorId?: string) {
+  if (!flavorId || !colorId) return false
+  const dis = INCOMPATIBLE[flavorId]
+  return Array.isArray(dis) && dis.includes(colorId)
 }
 
 /** Extracts a cart id from various server response shapes. */
@@ -100,12 +96,7 @@ export default function DesignPage() {
   const [flavors, setFlavors] = useState<Record<string, FlavorDef>>({})
   const [colors, setColors] = useState<Record<string, ColorDef>>({})
 
-  // Simple compatibility rules (kept from your UI)
-  const [rules] = useState([
-    { when: { flavor: "galaxy" }, disallow: { color: ["white"] } },
-    { when: { color: "white" }, disallow: { flavor: ["galaxy"] } },
-  ])
-
+  // Steps & selection
   const [active, setActive] = useState<StepId>("size")
   const [sel, setSel] = useState<Selections>({})
   const [artError, setArtError] = useState<string | null>(null)
@@ -117,7 +108,7 @@ export default function DesignPage() {
         const cfg = await getDesignConfig()
         setCurrency(cfg.currency === "EUR" ? "€" : (cfg.currency as any))
 
-        // Build size map; prefix with 's' to keep your UI ids (e.g. "s21x21")
+        // Build size map; prefix with 's' to keep UI ids (e.g. "s21x21")
         const sizeMap: Record<string, SizeDef> = {}
         cfg.options.size.forEach((s) => {
           const [w, h] = s.id.split("x")
@@ -201,14 +192,11 @@ export default function DesignPage() {
   }, [sel])
 
   // Selected option objects
-  // @ts-ignore
   const size = sel.size ? sizes[sel.size] : undefined
-  // @ts-ignore
   const flavor = sel.flavor ? flavors[sel.flavor] : undefined
-  // @ts-ignore
   const color = sel.color ? colors[sel.color] : undefined
 
-  // Live price from backend (guarded: only when we have all required selections)
+  // Live price from backend (only when we have all required selections)
   const [livePriceEur, setLivePriceEur] = useState<number>(0)
   useEffect(() => {
     ;(async () => {
@@ -231,7 +219,7 @@ export default function DesignPage() {
     })()
   }, [size?.id, flavor?.id, color?.id])
 
-  // Basic navigation & preview styling
+  // Steps nav / progress
   const order: StepId[] = ["size", "artwork", "flavor", "color", "summary"]
   const canNext =
     (active === "size" && !!sel.size) ||
@@ -244,6 +232,7 @@ export default function DesignPage() {
     setActive(order[Math.min(order.length - 1, order.indexOf(active) + 1)])
   const goPrev = () => setActive(order[Math.max(0, order.indexOf(active) - 1)])
 
+  // CSS variables for preview
   const previewVars: React.CSSProperties = useMemo(() => {
     const hue = color?.hue ?? 205
     const intensity = flavor?.intensity ?? 0.55
@@ -255,12 +244,18 @@ export default function DesignPage() {
     }
   }, [size, flavor, color])
 
-  // Update selection helpers
-  function pick(step: "flavor" | "color", value: string) {
-    setSel((prev) => ({ ...prev, [step]: value }))
-  }
+  // Selection helpers
   function pickSize(nextId: string) {
     setSel((prev) => ({ ...prev, size: nextId }))
+  }
+  function pickFlavor(nextId: string) {
+    // Reset color on flavor change to avoid illegal combos
+    setSel((prev) => ({ ...prev, flavor: nextId, color: undefined }))
+  }
+  function pickColor(nextId: string) {
+    // Guard: if blocked, ignore (should be disabled anyway)
+    if (isColorBlockedByFlavor(sel.flavor, nextId)) return
+    setSel((prev) => ({ ...prev, color: nextId }))
   }
   function resetAll() {
     setSel({})
@@ -274,7 +269,7 @@ export default function DesignPage() {
 
   function onPickExample(name: "example1.png" | "example2.png") {
     setArtError(null)
-    const url = `/${name}` // file in /public
+    const url = `/${name}` // asset in /public
     setSel((prev) => ({
       ...prev,
       art: { source: "example", name, dataUrl: url },
@@ -329,7 +324,7 @@ export default function DesignPage() {
         fileUrl = up.fileUrl
         fileName = up.fileName
       } else {
-        fileUrl = sel.art.dataUrl // example assets
+        fileUrl = sel.art.dataUrl // example asset
         fileName = sel.art.name
       }
 
@@ -343,17 +338,11 @@ export default function DesignPage() {
         fileUrl,
       })
 
-      // 3) Persist cart cookie in Next (so server actions see the same cart)
+      // 3) Persist cart cookie and refresh UI
       const cartId = extractCartId(cartResp)
       if (cartId) {
         await setCartCookie(cartId)
-
-        // 🔴 KEY CHANGE: refresh the current route so the navbar re-renders with new cart qty
-        // comments in English: this triggers a server-components re-fetch (RSC) and updates the badge
         router.refresh()
-
-        // (optional) tiny UX hint
-        // toast.success?.("Added to cart") // if you use a toast lib; else remove
       } else {
         console.warn(
           "[gg] No cart id returned from /store/designs/add",
@@ -367,7 +356,7 @@ export default function DesignPage() {
     }
   }
 
-  // Render options
+  // Options
   const sizeOptions = Object.values(sizes)
   const flavorOptions = Object.values(flavors)
   const colorOptions = Object.values(colors)
@@ -555,7 +544,7 @@ export default function DesignPage() {
                 </article>
               )}
 
-              {/* STEP 3 — FINISH (Flavor → Material) */}
+              {/* STEP 3 — FINISH (Flavor → Material). Materials are never disabled. */}
               {active === "flavor" && (
                 <article className="dy-card">
                   <header className="dy-card-header">
@@ -563,31 +552,19 @@ export default function DesignPage() {
                     <p className="dy-subtle">Surface and effect</p>
                   </header>
                   <div className="dy-options">
-                    {flavorOptions.map((opt) => {
-                      const disabled = isOptionDisabled(
-                        "flavor",
-                        opt.id,
-                        sel,
-                        rules
-                      )
+                    {Object.values(flavors).map((opt) => {
                       const checked = sel.flavor === opt.id
                       return (
                         <label
                           key={opt.id}
-                          className={cx(
-                            "dy-option",
-                            checked && "is-selected",
-                            disabled && "is-disabled"
-                          )}
-                          aria-disabled={disabled}
+                          className={cx("dy-option", checked && "is-selected")}
                         >
                           <input
                             type="radio"
                             name="dy-flavor"
                             value={opt.id}
-                            disabled={disabled}
                             checked={checked}
-                            onChange={() => pick("flavor", opt.id)}
+                            onChange={() => pickFlavor(opt.id)}
                           />
                           <span className="dy-bullet" aria-hidden />
                           <span className="dy-option-text">{opt.label}</span>
@@ -606,7 +583,7 @@ export default function DesignPage() {
                 </article>
               )}
 
-              {/* STEP 4 — COLOR */}
+              {/* STEP 4 — COLOR. Disabled based on current flavor selection. */}
               {active === "color" && (
                 <article className="dy-card">
                   <header className="dy-card-header">
@@ -614,12 +591,10 @@ export default function DesignPage() {
                     <p className="dy-subtle">LED accent color</p>
                   </header>
                   <div className="dy-swatches">
-                    {colorOptions.map((opt) => {
-                      const disabled = isOptionDisabled(
-                        "color",
-                        opt.id,
-                        sel,
-                        rules
+                    {Object.values(colors).map((opt) => {
+                      const disabled = isColorBlockedByFlavor(
+                        sel.flavor,
+                        opt.id
                       )
                       const checked = sel.color === opt.id
                       return (
@@ -631,7 +606,16 @@ export default function DesignPage() {
                             disabled && "is-disabled"
                           )}
                           aria-disabled={disabled}
-                          title={opt.label}
+                          title={
+                            disabled
+                              ? "Cant use that color with that material"
+                              : undefined
+                          }
+                          data-tooltip={
+                            disabled
+                              ? "Cant use that color with that material"
+                              : undefined
+                          }
                         >
                           <input
                             type="radio"
@@ -639,7 +623,7 @@ export default function DesignPage() {
                             value={opt.id}
                             disabled={disabled}
                             checked={checked}
-                            onChange={() => pick("color", opt.id)}
+                            onChange={() => pickColor(opt.id)}
                             aria-label={opt.label}
                           />
                           <span

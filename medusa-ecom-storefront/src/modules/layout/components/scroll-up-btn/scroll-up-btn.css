@@ -1,0 +1,154 @@
+/* Class prefix: gg- (no Tailwind) */
+/* Gradient button with soft glow and smooth show/hide transitions */
+
+.gg-scroll-up {
+    position: fixed;
+    right: 20px;
+    bottom: 22px;
+    z-index: 9999;
+
+    /* Sizing */
+    --gg-su-size: 56px;
+    width: var(--gg-su-size);
+    height: var(--gg-su-size);
+    border-radius: 999px;
+
+    /* Visuals: animated gradient core */
+    --gg-su-g1: #8a2be2; /* electric purple */
+    --gg-su-g2: #00e0ff; /* cyan */
+    --gg-su-g3: #00ffa3; /* mint */
+    background: linear-gradient(135deg, var(--gg-su-g1), var(--gg-su-g2), var(--gg-su-g3));
+    background-size: 200% 200%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #0b0f14;
+
+    /* Layout */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    /* Effects */
+    box-shadow:
+            0 12px 28px rgba(0, 0, 0, 0.45),
+            0 0 0 0 rgba(0, 224, 255, 0.0); /* glow ring (animated on hover) */
+    filter: saturate(120%);
+
+    /* Interaction */
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+
+    /* Motion: smooth reveal and micro movement */
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+    transition:
+            opacity 240ms ease,
+            transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            box-shadow 220ms ease,
+            background-position 6000ms linear; /* slow gradient drift */
+
+    /* Hidden non-interactive state */
+    pointer-events: none;
+}
+
+/* Visible state */
+.gg-scroll-up.gg-scroll-up--visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+    background-position: 100% 0%;
+}
+
+/* Subtle idle breathing glow to match LED theme */
+@keyframes gg-su-breathe {
+    0%   { box-shadow: 0 12px 28px rgba(0,0,0,0.45), 0 0 0 0 rgba(0, 224, 255, 0.08); }
+    50%  { box-shadow: 0 12px 28px rgba(0,0,0,0.45), 0 0 14px 0 rgba(0, 224, 255, 0.18); }
+    100% { box-shadow: 0 12px 28px rgba(0,0,0,0.45), 0 0 0 0 rgba(0, 224, 255, 0.08); }
+}
+
+.gg-scroll-up.gg-scroll-up--visible {
+    animation: gg-su-breathe 3.8s ease-in-out infinite;
+}
+
+/* Icon */
+.gg-scroll-up__icon {
+    width: 22px;
+    height: 22px;
+    fill: #0b0f14; /* visible on bright gradient */
+    transition: transform 180ms ease;
+    will-change: transform;
+}
+
+/* Hover/active interactions */
+.gg-scroll-up:hover {
+    box-shadow:
+            0 16px 34px rgba(0, 0, 0, 0.5),
+            0 0 0 8px rgba(0, 224, 255, 0.12);
+    transform: translateY(-1px) scale(1.02);
+}
+
+.gg-scroll-up:active {
+    transform: translateY(0) scale(0.96);
+    transition-duration: 120ms;
+}
+
+.gg-scroll-up:hover .gg-scroll-up__icon {
+    transform: translateY(-1px);
+}
+
+/* Extra glow ring via pseudo-element */
+.gg-scroll-up::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(from 0deg, var(--gg-su-g1), var(--gg-su-g2), var(--gg-su-g3), var(--gg-su-g1));
+    -webkit-mask:
+            linear-gradient(#000 0 0) content-box,
+            linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.65;
+    filter: blur(6px);
+    transition: opacity 220ms ease, transform 600ms linear;
+}
+
+.gg-scroll-up:hover::before {
+    opacity: 0.85;
+}
+
+/* Accessibility: screen-reader only text */
+.gg-su-sr-only {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0);
+    white-space: nowrap; border: 0;
+}
+
+/* Small screens: keep target size comfy */
+@media (max-width: 480px) {
+    .gg-scroll-up {
+        --gg-su-size: 52px;
+        right: 16px;
+        bottom: 18px;
+    }
+    .gg-scroll-up__icon {
+        width: 20px; height: 20px;
+    }
+}
+
+/* Respect users that prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .gg-scroll-up {
+        transition: opacity 120ms linear, box-shadow 120ms linear;
+        animation: none;
+        transform: none;
+        background-position: 0 0;
+    }
+    .gg-scroll-up:hover,
+    .gg-scroll-up:active {
+        transform: none;
+    }
+}

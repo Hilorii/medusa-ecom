@@ -1,8 +1,8 @@
 /* ------------------ Base & card ------------------ */
 .hiw-wrap {
     color: white;
-    margin-top: 50px;
-    margin-bottom: -120px;
+    margin-top: 70px;
+    margin-bottom: -40;
     padding-bottom: max(4rem, env(safe-area-inset-bottom));
 }
 

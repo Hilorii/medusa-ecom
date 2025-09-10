@@ -1,0 +1,124 @@
+/* Root bubble styles (no Tailwind). Class prefix: gg- */
+/* The design aims for a modern glassy pill with soft glow. */
+
+/* ---- Base ---- */
+.gg-cart-bubble {
+    position: fixed;
+    z-index: 9999; /* Above typical overlays */
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+
+    /* Visuals */
+    background: radial-gradient(120% 120% at 30% 20%, rgba(255, 255, 255, 0.08), rgba(10, 10, 10, 0.9));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+            0 10px 25px rgba(0, 0, 0, 0.35),
+            0 0 0 0 rgba(0, 200, 255, 0.0); /* Glow ring on hover (animated) */
+    backdrop-filter: saturate(160%) blur(8px);
+
+    /* Layout */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* Interaction */
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none; /* Better pointer drag on touch devices */
+
+    /* Motion — smooth snap (when not dragging) */
+    transition:
+            top 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            left 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            right 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            bottom 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            box-shadow 220ms ease,
+            border-color 220ms ease,
+            background 220ms ease;
+}
+
+/* Icon sizing (inherits currentColor) */
+.gg-cart-bubble__icon {
+    font-size: 22px;
+    line-height: 1;
+    color: #f8fafc; /* Subtle off-white */
+    pointer-events: none;
+}
+
+/* Hover/press states */
+.gg-cart-bubble:hover {
+    transform: translateY(-1px);
+    box-shadow:
+            0 14px 30px rgba(0, 0, 0, 0.4),
+            0 0 0 6px rgba(0, 200, 255, 0.12); /* Soft cyan ring */
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.gg-cart-bubble:active {
+    transform: translateY(0) scale(0.96);
+    transition-duration: 120ms; /* Snappier press */
+    cursor: grabbing;
+}
+
+/* Drag state — disable transitions for pixel-perfect tracking */
+.gg-cart-bubble.is-dragging {
+    transition: none;
+    transform: translateZ(0); /* Avoid blurring while moving */
+    box-shadow:
+            0 18px 40px rgba(0, 0, 0, 0.5),
+            0 0 0 10px rgba(0, 200, 255, 0.06);
+    cursor: grabbing;
+}
+
+/* Optional: tiny breathing glow when idle to match LED theme */
+@keyframes gg-breath {
+    0%   { box-shadow: 0 10px 25px rgba(0,0,0,0.35), 0 0 0 0 rgba(0, 200, 255, 0.06); }
+    50%  { box-shadow: 0 10px 25px rgba(0,0,0,0.35), 0 0 12px 0 rgba(0, 200, 255, 0.14); }
+    100% { box-shadow: 0 10px 25px rgba(0,0,0,0.35), 0 0 0 0 rgba(0, 200, 255, 0.06); }
+}
+
+.gg-cart-bubble:not(.is-dragging) {
+    animation: gg-breath 3.6s ease-in-out infinite;
+}
+
+/* Respect users that prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .gg-cart-bubble,
+    .gg-cart-bubble:hover,
+    .gg-cart-bubble:active {
+        transition: none;
+        animation: none;
+    }
+}
+
+@media (min-width: 1024px) {
+    .gg-cart-bubble {
+        display: none;
+    }
+}
+
+/* Small screens — keep tap target comfortable */
+@media (max-width: 480px) {
+    .gg-cart-bubble {
+        width: 52px;
+        height: 52px;
+    }
+    .gg-cart-bubble__icon {
+        font-size: 20px;
+    }
+}
+
+/* High-contrast / forced colors fallback */
+@media (forced-colors: active) {
+    .gg-cart-bubble {
+        background: Canvas;
+        border: 1px solid CanvasText;
+        box-shadow: none;
+    }
+    .gg-cart-bubble__icon {
+        color: CanvasText;
+    }
+}

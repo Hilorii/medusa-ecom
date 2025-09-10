@@ -9,13 +9,16 @@
 import { Badge, Heading, Input, Label, Text } from "@medusajs/ui"
 import React, { useActionState } from "react"
 
-import { applyPromotions, submitPromotionForm } from "@lib/data/cart"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import Trash from "@modules/common/icons/trash"
 import ErrorMessage from "../error-message"
 import { SubmitButton } from "../submit-button"
-
+import {
+  applyPromotions,
+  removeDiscount,
+  submitPromotionForm,
+} from "@lib/data/cart"
 import "./discount-code.css"
 
 type DiscountCodeProps = {
@@ -44,13 +47,9 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
 
   const promotions = (cart.promotions ?? []) as PromotionLike[]
 
-  // Remove a promotion code and apply the remaining codes
+  // Remove a promotion code on the server
   const removePromotionCode = async (code: string) => {
-    // Keep codes of other non-automatic promotions
-    const remainingCodes = promotions
-      .filter((p) => !!p.code && p.code !== code)
-      .map((p) => p.code!) // safe: filtered truthy
-    await applyPromotions(remainingCodes)
+    await removeDiscount(code)
   }
 
   // Add a new promotion code and re-apply

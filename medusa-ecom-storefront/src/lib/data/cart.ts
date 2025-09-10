@@ -503,15 +503,70 @@ export async function applyPromotions(codes: string[]) {
 }
 
 export async function applyGiftCard(code: string) {
-  // noop for now
+  const cartId = await getCartId()
+  if (!cartId) throw new Error("No existing cart found")
+
+  const headers = { ...(await getAuthHeaders()) }
+
+  // Retrieve existing gift cards so we don't overwrite them
+  const cart = await sdk.store.cart
+    .retrieve(cartId, {}, headers)
+    .then(({ cart }) => cart)
+  // @ts-ignore
+  const codes = (cart?.gift_cards || [])
+    .map((gc: any) => gc.code)
+    .filter((c: string | undefined): c is string => !!c)
+  codes.push(code)
+
+  return (
+    sdk.store.cart
+      // @ts-ignore
+      .update(cartId, { gift_cards: codes }, {}, headers)
+      .then(async () => {
+        const cartCacheTag = await getCacheTag("carts")
+        revalidateTag(cartCacheTag)
+
+        const fulfillmentCacheTag = await getCacheTag("fulfillment")
+        revalidateTag(fulfillmentCacheTag)
+      })
+      .catch(medusaError)
+  )
 }
 
 export async function removeDiscount(code: string) {
-  // noop for now
+  const cart = await retrieveCart()
+  if (!cart) throw new Error("No existing cart found")
+
+  const codes = (cart.promotions || [])
+    .filter((p: any) => p.code && p.code !== code)
+    .map((p: any) => p.code as string)
+
+  return applyPromotions(codes)
 }
 
 export async function removeGiftCard(codeToRemove: string, giftCards: any[]) {
-  // noop for now
+  const cartId = await getCartId()
+  if (!cartId) throw new Error("No existing cart found")
+
+  const headers = { ...(await getAuthHeaders()) }
+
+  const codes = (giftCards || [])
+    .map((gc: any) => (typeof gc === "string" ? gc : gc.code))
+    .filter((c: any) => !!c && c !== codeToRemove)
+
+  return (
+    sdk.store.cart
+      // @ts-ignore
+      .update(cartId, { gift_cards: codes }, {}, headers)
+      .then(async () => {
+        const cartCacheTag = await getCacheTag("carts")
+        revalidateTag(cartCacheTag)
+
+        const fulfillmentCacheTag = await getCacheTag("fulfillment")
+        revalidateTag(fulfillmentCacheTag)
+      })
+      .catch(medusaError)
+  )
 }
 
 export async function submitPromotionForm(

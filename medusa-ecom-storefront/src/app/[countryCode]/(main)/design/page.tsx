@@ -343,6 +343,7 @@ export default function DesignPage() {
       if (cartId) {
         await setCartCookie(cartId)
         router.refresh()
+        router.push("/cart")
       } else {
         console.warn(
           "[gg] No cart id returned from /store/designs/add",
@@ -515,7 +516,8 @@ export default function DesignPage() {
                                 <span className="dy-example-thumb">
                                   <img src={`/${name}`} alt={name} />
                                 </span>
-                                <span className="dy-example-name">{name}</span>
+                                {/* Name of example file under the photo. */}
+                                {/*<span className="dy-example-name">{name}</span>*/}
                               </button>
                             )
                           }

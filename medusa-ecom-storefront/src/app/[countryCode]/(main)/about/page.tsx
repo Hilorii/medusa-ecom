@@ -55,7 +55,7 @@ export default function AboutPage() {
           {/* CTA */}
           <div className="mt-10 flex flex-wrap items-center gap-3">
             <a
-              href="/contact"
+              href="/design"
               className="about-btn-primary"
               aria-label="Start your sign"
             >

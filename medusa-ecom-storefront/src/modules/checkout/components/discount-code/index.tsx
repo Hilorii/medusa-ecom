@@ -14,11 +14,7 @@ import { HttpTypes } from "@medusajs/types"
 import Trash from "@modules/common/icons/trash"
 import ErrorMessage from "../error-message"
 import { SubmitButton } from "../submit-button"
-import {
-  applyPromotions,
-  removeDiscount,
-  submitPromotionForm,
-} from "@lib/data/cart"
+import { removeDiscount, submitPromotionForm } from "@lib/data/cart"
 import "./discount-code.css"
 
 type DiscountCodeProps = {
@@ -52,19 +48,14 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
     await removeDiscount(code)
   }
 
-  // Add a new promotion code and re-apply
+  // Add a new promotion code through the server action and clear the input
   const addPromotionCode = async (formData: FormData) => {
-    const code = formData.get("code")
-    if (!code) return
-
+    const res = await formAction(formData)
     const input = document.getElementById(
       "promotion-input"
     ) as HTMLInputElement | null
-    const codes = promotions.filter((p) => !!p.code).map((p) => p.code!)
-    codes.push(String(code))
-
-    await applyPromotions(codes)
     if (input) input.value = ""
+    return res
   }
 
   /** Render the numeric/percentage value for a promotion in a safe, typed way */

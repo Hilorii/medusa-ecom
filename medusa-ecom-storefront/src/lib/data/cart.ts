@@ -489,9 +489,11 @@ export async function applyPromotions(codes: string[]) {
   if (!cartId) throw new Error("No existing cart found")
 
   const headers = { ...(await getAuthHeaders()) }
+  const normalized = codes.filter((c) => !!c)
+  const latest = normalized.length ? [normalized[normalized.length - 1]] : []
 
   return sdk.store.cart
-    .update(cartId, { promo_codes: codes }, {}, headers)
+    .update(cartId, { promo_codes: latest }, {}, headers)
     .then(async () => {
       const cartCacheTag = await getCacheTag("carts")
       revalidateTag(cartCacheTag)
@@ -575,9 +577,14 @@ export async function submitPromotionForm(
 ) {
   const code = formData.get("code") as string
   try {
+    const cart = await retrieveCart()
+    const hadCode = Boolean(cart?.promotions?.length)
     await applyPromotions([code])
+    if (hadCode) {
+      return "Can't use more than one code."
+    }
   } catch (e: any) {
-    return e.message
+    return "Invalid code"
   }
 }
 

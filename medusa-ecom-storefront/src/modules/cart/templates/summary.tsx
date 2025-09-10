@@ -58,7 +58,7 @@ const Summary = ({ cart }: SummaryProps) => {
       </LocalizedClientLink>
 
       <p className="rrc-footnote">
-        Secure checkout • Free returns within 30 days
+        Secure checkout • See our Shipping & Returns Policy
       </p>
     </section>
   )

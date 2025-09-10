@@ -120,30 +120,25 @@ const CartDropdown = ({
                         key={item.id}
                         data-testid="cart-item"
                       >
-                        <LocalizedClientLink
-                          href={`/products/${item.product_handle}`}
-                          className="w-24"
-                          onClick={close}
-                        >
+                        <div className="w-24" onClick={close}>
                           <Thumbnail
                             thumbnail={item.thumbnail}
                             images={item.variant?.product?.images}
                             size="square"
                           />
-                        </LocalizedClientLink>
+                        </div>
 
                         <div className="flex flex-col justify-between flex-1">
                           <div className="flex flex-col flex-1">
                             <div className="flex items-start justify-between">
                               <div className="flex flex-col overflow-ellipsis whitespace-nowrap mr-4 w-[180px]">
                                 <h3 className="text-base-regular overflow-hidden text-ellipsis">
-                                  <LocalizedClientLink
-                                    href={`/products/${item.product_handle}`}
+                                  <div
                                     data-testid="product-link"
                                     onClick={close}
                                   >
                                     {item.title}
-                                  </LocalizedClientLink>
+                                  </div>
                                 </h3>
 
                                 <LineItemOptions

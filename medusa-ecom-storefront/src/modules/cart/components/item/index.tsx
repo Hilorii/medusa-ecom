@@ -56,8 +56,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
     >
       {/* THUMB */}
       <div className="rrc-cell rrc-thumb">
-        <LocalizedClientLink
-          href={`/products/${item.product_handle}`}
+        <div
           className={clx("rrc-thumb-link", {
             "rrc-thumb-preview": type === "preview",
             "rrc-thumb-full": type === "full",
@@ -68,17 +67,18 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
             images={item.variant?.product?.images}
             size="square"
           />
-        </LocalizedClientLink>
+        </div>
       </div>
 
       {/* MAIN */}
       <div className="rrc-cell rrc-main">
-        <Text className="rrc-item-title" data-testid="product-title">
-          {item.product_title}
-        </Text>
+        {/* Items title */}
+        {/*<Text className="rrc-item-title" data-testid="product-title">*/}
+        {/*  {item.product_title}*/}
+        {/*</Text>*/}
 
-        {/* comments in English: standard variant options (size/variant from Medusa) */}
-        <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        {/* Variant info */}
+        {/*<LineItemOptions variant={item.variant} data-testid="product-variant" />*/}
 
         {/* Custom metadata block (Design Your Own selections) */}
         {metaRows.length > 0 && (
@@ -92,14 +92,14 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
               ))}
               {md.fileUrl && (
                 <li className="gg-meta-item">
-                  <a
-                    href={md.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="gg-meta-link"
-                  >
-                    View artwork
-                  </a>
+                  {/*<a*/}
+                  {/*  href={md.fileUrl}*/}
+                  {/*  target="_blank"*/}
+                  {/*  rel="noreferrer"*/}
+                  {/*  className="gg-meta-link"*/}
+                  {/*>*/}
+                  {/*  View artwork*/}
+                  {/*</a>*/}
                 </li>
               )}
             </ul>

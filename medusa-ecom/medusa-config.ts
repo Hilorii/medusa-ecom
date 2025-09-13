@@ -14,6 +14,22 @@ module.exports = defineConfig({
     },
   },
   modules: [
+    {
+      resolve: "@medusajs/medusa/notification",
+      options: {
+        providers: [
+          {
+            resolve: "./src/modules/gg-resend",
+            id: "gg-resend",
+            options: {
+              channels: ["email"],
+              api_key: process.env.RESEND_API_KEY,
+              from: process.env.RESEND_FROM_EMAIL,
+            },
+          },
+        ],
+      },
+    },
     // gg: Stripe payments (v2 module)
     {
       resolve: "@medusajs/payment",
@@ -30,12 +46,12 @@ module.exports = defineConfig({
               automatic_payment_methods: true,
             },
           },
-          // tutaj możesz dodać kolejne providery Stripe (P24/iDEAL/Bancontact)
+          // you can add next providers here Stripe (P24/iDEAL/Bancontact)
         ],
       },
     },
 
-    // gg: Twój moduł
+    // Training module can remove it safely
     { resolve: "./src/modules/brand" },
   ],
 });

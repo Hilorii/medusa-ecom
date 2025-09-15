@@ -222,6 +222,13 @@
     background-position: 100% 0;
 }
 
+.contact-button:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
 .contact-secondary {
     padding: .85rem 1.2rem;
     border-radius: 1rem;
@@ -240,6 +247,17 @@
 /* links */
 .contact-small { margin-top: .6rem; color: rgba(255,255,255,.75); }
 .contact-link { text-decoration: underline; color: #c8f1ff; }
+
+.contact-feedback {
+    margin-top: .75rem;
+    font-size: .9rem;
+}
+.contact-feedback--success {
+    color: rgba(182,255,0,.9);
+}
+.contact-feedback--error {
+    color: #ffb3b3;
+}
 
 /* --------------- Interactive micro‑effects --------------- */
 /* subtelna pionowa linia akcentowa przy form */

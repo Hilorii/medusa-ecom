@@ -110,6 +110,16 @@ NEXT_PUBLIC_STRIPE_KEY=<your-stripe-public-key>
 
 You'll also need to setup the integrations in your Medusa server. See the [Medusa documentation](https://docs.medusajs.com) for more information on how to configure [Stripe](https://docs.medusajs.com/resources/commerce-modules/payment/payment-provider/stripe#main).
 
+### Contact form emails
+
+The contact page uses [Resend](https://resend.com/) to deliver submissions. Set the following environment variable in your `.env.local` file so the form can send emails:
+
+```shell
+RESEND_API_KEY=<your-resend-api-key>
+```
+
+Submissions are sent from and to `hilori.furan@wp.pl` by default, and include the visitor's name, email, and message in the body of the email.
+
 # Resources
 
 ## Learn more about Medusa

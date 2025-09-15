@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import "./contact.css"
+import { ContactForm } from "./contact-form"
 
 export const metadata: Metadata = {
   title: "Contact – GlitchGlow",
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
 }
 
 export default function ContactPage() {
-  const mail = "hello@glitchglow.com"
+  const mail = "hilori.furan@wp.pl"
 
   return (
     <div className="contact-section">
@@ -69,72 +70,8 @@ export default function ContactPage() {
               </div>
             </aside>
 
-            {/* Right: form (mailto – uruchomi klienta poczty) */}
-            <form
-              className="contact-form"
-              action={`mailto:${mail}`}
-              method="POST"
-              encType="text/plain"
-              target="_blank"
-            >
-              <div className="contact-field">
-                <input
-                  className="contact-input"
-                  id="name"
-                  name="Name"
-                  placeholder=" "
-                  required
-                />
-                <label htmlFor="name" className="contact-label">
-                  Your name
-                </label>
-              </div>
-
-              <div className="contact-field">
-                <input
-                  className="contact-input"
-                  id="email"
-                  name="Email"
-                  type="email"
-                  placeholder=" "
-                  required
-                />
-                <label htmlFor="email" className="contact-label">
-                  Email address
-                </label>
-              </div>
-
-              <div className="contact-field contact-field-textarea">
-                <textarea
-                  className="contact-input contact-textarea"
-                  id="message"
-                  name="Message"
-                  placeholder=" "
-                  rows={5}
-                  required
-                />
-                <label htmlFor="message" className="contact-label">
-                  Tell us about your idea
-                </label>
-              </div>
-
-              <div className="contact-actions">
-                <button type="submit" className="contact-button">
-                  Send message
-                </button>
-                <a href="/faq" className="contact-secondary">
-                  FAQ
-                </a>
-              </div>
-
-              <p className="contact-small">
-                Prefer direct email? Write us at{" "}
-                <a className="contact-link" href={`mailto:${mail}`}>
-                  {mail}
-                </a>
-                .
-              </p>
-            </form>
+            {/* Right: form (Resend email submission) */}
+            <ContactForm mail={mail} />
           </div>
         </section>
       </main>

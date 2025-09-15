@@ -2,7 +2,9 @@
 import { Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils";
 
 export default async function ggShipmentCreated({ event, container }) {
-  if (event.data.no_notification) return;
+  if (event.data.no_notification) {
+    return;
+  }
 
   let logger;
 
@@ -12,7 +14,6 @@ export default async function ggShipmentCreated({ event, container }) {
     logger = console;
   }
 
-  const fulfillmentModule = container.resolve(Modules.FULFILLMENT);
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
 
   let notificationModule:
@@ -32,26 +33,50 @@ export default async function ggShipmentCreated({ event, container }) {
     return;
   }
 
-  const fulfillment = await fulfillmentModule.retrieveFulfillment(
-    event.data.id,
-  );
-
   const {
-    data: [order],
+    data: [fulfillment],
   } = await query.graph({
-    entity: "order",
-    fields: ["id", "display_id", "email"],
-    filters: { fulfillments: { id: fulfillment.id } },
+    entity: "fulfillment",
+    fields: [
+      "id",
+      "labels.tracking_number",
+      "labels.tracking_url",
+      "order.id",
+      "order.display_id",
+      "order.email",
+    ],
+    filters: { id: event.data.id },
   });
 
-  const trackingNumber =
-    fulfillment.tracking_numbers?.[0] ??
-    fulfillment.labels?.[0]?.value ??
-    "N/A";
+  if (!fulfillment) {
+    logger?.warn?.(
+      {
+        fulfillmentId: event.data.id,
+      },
+      "Skipping shipment created email notification. Fulfillment not found.",
+    );
+    return;
+  }
+
+  const order = fulfillment.order;
+
+  if (!order?.email) {
+    logger?.warn?.(
+      {
+        fulfillmentId: fulfillment.id,
+      },
+      "Skipping shipment created email notification. Related order or email not found.",
+    );
+    return;
+  }
+
+  const label = fulfillment.labels?.[0];
+  const trackingNumber = label?.tracking_number ?? "N/A";
 
   const carrierUrl =
-    fulfillment.tracking_links?.[0]?.url ??
+    label?.tracking_url ??
     `${process.env.DEFAULT_TRACK_URL ?? "https://www.17track.net/en#nums="}${trackingNumber}`;
+
   const resendApiKey = process.env.RESEND_API_KEY;
   const resendFromEmail = process.env.RESEND_FROM_EMAIL;
 
@@ -68,7 +93,7 @@ export default async function ggShipmentCreated({ event, container }) {
       channel: "email",
       template: "shipment-created",
       data: {
-        order_id: order.display_id,
+        order_id: order.display_id ?? order.id,
         tracking_number: trackingNumber,
         tracking_url: carrierUrl,
       },

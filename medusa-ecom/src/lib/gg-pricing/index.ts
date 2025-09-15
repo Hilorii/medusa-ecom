@@ -93,16 +93,21 @@ export function ggCalculatePrice(
 }
 
 /** Quick helper to check if a combination is allowed. Extend with rules later. */
-export function ggValidateSelections(sel: GGSelections): {
-  ok: boolean;
-  reason?: string;
-} {
-  // Example rule placeholder: forbid 'iridescent' with 'brown'
-  if (sel.material === "iridescent" && sel.color === "brown") {
-    return {
-      ok: false,
-      reason: "Iridescent is not available with Brown color.",
-    };
-  }
-  return { ok: true };
-}
+
+//
+// Const INCOMPATIBLE in design/page.tsx is now responsible for incompatible selections
+//
+
+// export function ggValidateSelections(sel: GGSelections): {
+//   ok: boolean;
+//   reason?: string;
+// } {
+//   // Example rule placeholder: forbid 'iridescent' with 'brown'
+//   if (sel.material === "iridescent" && sel.color === "brown") {
+//     return {
+//       ok: false,
+//       reason: "Iridescent is not available with Brown color.",
+//     };
+//   }
+//   return { ok: true };
+// }

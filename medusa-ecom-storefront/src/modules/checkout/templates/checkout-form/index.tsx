@@ -8,6 +8,9 @@ import Shipping from "@modules/checkout/components/shipping"
 import "./checkout-form.css"
 import { CheckoutPaymentProvider } from "@modules/checkout/context/payment-context"
 
+const isSessionReady = (status?: string | null) =>
+  status === "pending" || status === "requires_more"
+
 export default async function CheckoutForm({
   cart,
   customer,
@@ -27,7 +30,7 @@ export default async function CheckoutForm({
   }
 
   const activeSession = cart.payment_collection?.payment_sessions?.find(
-    (session) => session.status === "pending"
+    (session) => isSessionReady(session.status)
   )
 
   return (

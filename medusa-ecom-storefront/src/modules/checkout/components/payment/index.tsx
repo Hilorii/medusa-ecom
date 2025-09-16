@@ -15,6 +15,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useCheckoutPayment } from "@modules/checkout/context/payment-context"
 
+const isSessionReady = (status?: string | null) =>
+  status === "pending" || status === "requires_more"
+
 const Payment = ({
   cart,
   availablePaymentMethods,
@@ -23,7 +26,7 @@ const Payment = ({
   availablePaymentMethods: any[]
 }) => {
   const activeSession = cart.payment_collection?.payment_sessions?.find(
-    (paymentSession: any) => paymentSession.status === "pending"
+    (paymentSession: any) => isSessionReady(paymentSession.status)
   )
   const shippingMethodCount = cart?.shipping_methods?.length ?? 0
 

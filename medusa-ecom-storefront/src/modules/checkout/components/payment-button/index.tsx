@@ -16,6 +16,9 @@ type PaymentButtonProps = {
   "data-testid": string
 }
 
+const isStripeSessionReady = (status?: string | null) =>
+  status === "pending" || status === "requires_more"
+
 const PaymentButton: React.FC<PaymentButtonProps> = ({
   cart,
   "data-testid": dataTestId,
@@ -91,10 +94,12 @@ const StripePaymentButton = ({
 
   const session =
     cart.payment_collection?.payment_sessions?.find(
-      (s) => s.status === "pending" && s.provider_id === selectedPaymentMethod
+      (s) =>
+        isStripeSessionReady(s.status) &&
+        s.provider_id === selectedPaymentMethod
     ) ??
-    cart.payment_collection?.payment_sessions?.find(
-      (s) => s.status === "pending"
+    cart.payment_collection?.payment_sessions?.find((s) =>
+      isStripeSessionReady(s.status)
     )
 
   const disabled = !stripe || !elements ? true : false

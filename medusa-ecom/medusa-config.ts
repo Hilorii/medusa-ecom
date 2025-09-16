@@ -42,8 +42,6 @@ module.exports = defineConfig({
               apiKey: process.env.STRIPE_API_KEY,
               // webhookSecret: process.env.STRIPE_WEBHOOK_SECRET, // optional now
               capture: true,
-              automaticPaymentMethods: true,
-              automatic_payment_methods: true,
             },
           },
           {
@@ -52,8 +50,6 @@ module.exports = defineConfig({
             options: {
               apiKey: process.env.STRIPE_API_KEY,
               capture: true,
-              automaticPaymentMethods: true,
-              automatic_payment_methods: true,
             },
           },
           // you can add next providers here Stripe (P24/iDEAL/Bancontact)

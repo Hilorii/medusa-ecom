@@ -14,9 +14,12 @@ type PaymentWrapperProps = {
 const stripeKey = process.env.NEXT_PUBLIC_STRIPE_KEY
 const stripePromise = stripeKey ? loadStripe(stripeKey) : null
 
+const isStripeSessionReady = (status?: string | null) =>
+  status === "pending" || status === "requires_more"
+
 const PaymentWrapper: React.FC<PaymentWrapperProps> = ({ cart, children }) => {
-  const paymentSession = cart.payment_collection?.payment_sessions?.find(
-    (s) => s.status === "pending"
+  const paymentSession = cart.payment_collection?.payment_sessions?.find((s) =>
+    isStripeSessionReady(s.status)
   )
 
   if (

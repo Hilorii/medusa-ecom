@@ -612,6 +612,18 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
       email: formData.get("email"),
     } as any
 
+    const shippingCountry = formData.get("shipping_address.country_code") as
+      | string
+      | null
+
+    if (shippingCountry) {
+      const region = await getRegion(shippingCountry)
+      if (!region)
+        throw new Error(`Region not found for country code: ${shippingCountry}`)
+
+      data.region_id = region.id
+    }
+
     const sameAsBilling = formData.get("same_as_billing")
     if (sameAsBilling === "on") data.billing_address = data.shipping_address
 
@@ -663,6 +675,26 @@ export async function updateRegion(countryCode: string, currentPath: string) {
   redirect(`/${countryCode}${currentPath}`)
 }
 
+export async function updateCartRegionByCountry(countryCode: string) {
+  if (!countryCode) {
+    throw new Error("Country code is required to update cart region")
+  }
+
+  const region = await getRegion(countryCode)
+  if (!region) {
+    throw new Error(`Region not found for country code: ${countryCode}`)
+  }
+
+  await updateCart({ region_id: region.id })
+
+  const regionCacheTag = await getCacheTag("regions")
+  revalidateTag(regionCacheTag)
+
+  const productsCacheTag = await getCacheTag("products")
+  revalidateTag(productsCacheTag)
+
+  return region
+}
 export async function listCartOptions() {
   const cartId = await getCartId()
   const headers = { ...(await getAuthHeaders()) }

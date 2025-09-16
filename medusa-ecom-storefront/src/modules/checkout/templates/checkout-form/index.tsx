@@ -7,6 +7,7 @@ import Review from "@modules/checkout/components/review"
 import Shipping from "@modules/checkout/components/shipping"
 import "./checkout-form.css"
 import { CheckoutPaymentProvider } from "@modules/checkout/context/payment-context"
+import { listRegions } from "@lib/data/regions"
 
 const isSessionReady = (status?: string | null) =>
   status === "pending" || status === "requires_more"
@@ -24,6 +25,7 @@ export default async function CheckoutForm({
 
   const shippingMethods = await listCartShippingMethods(cart.id)
   const paymentMethods = await listCartPaymentMethods(cart.region?.id ?? "")
+  const regions = (await listRegions()) ?? []
 
   if (!shippingMethods || !paymentMethods) {
     return null
@@ -36,7 +38,7 @@ export default async function CheckoutForm({
   return (
     <CheckoutPaymentProvider initialMethod={activeSession?.provider_id}>
       <div className="gg-checkout-form w-full grid grid-cols-1 gap-y-8">
-        <Addresses cart={cart} customer={customer} />
+        <Addresses cart={cart} customer={customer} regions={regions} />
 
         <Shipping cart={cart} availableShippingMethods={shippingMethods} />
 

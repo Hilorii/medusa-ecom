@@ -3,7 +3,14 @@ import { Container } from "@medusajs/ui"
 import Checkbox from "@modules/common/components/checkbox"
 import Input from "@modules/common/components/input"
 import { mapKeys } from "lodash"
-import React, { useEffect, useMemo, useState } from "react"
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react"
+import { updateCartRegionByCountry } from "@lib/data/cart"
 import AddressSelect from "../address-select"
 import CountrySelect from "../country-select"
 
@@ -12,11 +19,13 @@ const ShippingAddress = ({
   cart,
   checked,
   onChange,
+  regions,
 }: {
   customer: HttpTypes.StoreCustomer | null
   cart: HttpTypes.StoreCart | null
   checked: boolean
   onChange: () => void
+  regions: HttpTypes.StoreRegion[]
 }) => {
   const [formData, setFormData] = useState<Record<string, any>>({
     "shipping_address.first_name": cart?.shipping_address?.first_name || "",
@@ -31,19 +40,34 @@ const ShippingAddress = ({
     email: cart?.email || "",
   })
 
-  const countriesInRegion = useMemo(
-    () => cart?.region?.countries?.map((c) => c.iso_2),
-    [cart?.region]
+  const savedAddresses = useMemo(
+    () => customer?.addresses ?? [],
+    [customer?.addresses]
   )
 
   // check if customer has saved addresses that are in the current region
-  const addressesInRegion = useMemo(
-    () =>
-      customer?.addresses.filter(
-        (a) => a.country_code && countriesInRegion?.includes(a.country_code)
-      ),
-    [customer?.addresses, countriesInRegion]
+  const [, startTransition] = useTransition()
+  const previousCountry = useRef<string | undefined>(
+    cart?.shipping_address?.country_code || undefined
   )
+
+  const shippingCountry = formData["shipping_address.country_code"] as
+    | string
+    | undefined
+
+  useEffect(() => {
+    if (!shippingCountry || previousCountry.current === shippingCountry) {
+      return
+    }
+
+    previousCountry.current = shippingCountry
+
+    startTransition(() => {
+      updateCartRegionByCountry(shippingCountry).catch((err) => {
+        console.error("Failed to update cart region", err)
+      })
+    })
+  }, [shippingCountry, startTransition])
 
   const setFormAddress = (
     address?: HttpTypes.StoreCartAddress,
@@ -94,13 +118,13 @@ const ShippingAddress = ({
 
   return (
     <>
-      {customer && (addressesInRegion?.length || 0) > 0 && (
+      {customer && (savedAddresses.length || 0) > 0 && (
         <Container className="mb-6 flex flex-col gap-y-4 p-5">
           <p className="text-small-regular">
             {`Hi ${customer.first_name}, do you want to use one of your saved addresses?`}
           </p>
           <AddressSelect
-            addresses={customer.addresses}
+            addresses={savedAddresses}
             addressInput={
               mapKeys(formData, (_, key) =>
                 key.replace("shipping_address.", "")
@@ -168,6 +192,7 @@ const ShippingAddress = ({
           name="shipping_address.country_code"
           autoComplete="country"
           region={cart?.region}
+          regions={regions}
           value={formData["shipping_address.country_code"]}
           onChange={handleChange}
           required

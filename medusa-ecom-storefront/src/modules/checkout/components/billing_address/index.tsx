@@ -3,7 +3,13 @@ import Input from "@modules/common/components/input"
 import React, { useState } from "react"
 import CountrySelect from "../country-select"
 
-const BillingAddress = ({ cart }: { cart: HttpTypes.StoreCart | null }) => {
+const BillingAddress = ({
+  cart,
+  regions,
+}: {
+  cart: HttpTypes.StoreCart | null
+  regions: HttpTypes.StoreRegion[]
+}) => {
   const [formData, setFormData] = useState<any>({
     "billing_address.first_name": cart?.billing_address?.first_name || "",
     "billing_address.last_name": cart?.billing_address?.last_name || "",
@@ -85,6 +91,7 @@ const BillingAddress = ({ cart }: { cart: HttpTypes.StoreCart | null }) => {
           name="billing_address.country_code"
           autoComplete="country"
           region={cart?.region}
+          regions={regions}
           value={formData["billing_address.country_code"]}
           onChange={handleChange}
           required

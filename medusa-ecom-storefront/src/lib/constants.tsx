@@ -4,6 +4,10 @@ import { CreditCard } from "@medusajs/icons"
 import Ideal from "@modules/common/icons/ideal"
 import Bancontact from "@modules/common/icons/bancontact"
 import PayPal from "@modules/common/icons/paypal"
+import Blik from "@modules/common/icons/blik"
+import Przelewy24 from "@modules/common/icons/przelewy24"
+import ApplePay from "@modules/common/icons/apple-pay"
+import GooglePay from "@modules/common/icons/google-pay"
 
 /* Map of payment provider_id to their title and icon. Add in any payment providers you want to use. */
 export const paymentInfoMap: Record<
@@ -13,6 +17,26 @@ export const paymentInfoMap: Record<
   pp_stripe_stripe: {
     title: "Credit card",
     icon: <CreditCard />,
+  },
+  "pp_stripe-przelewy24_stripe": {
+    title: "Przelewy24",
+    icon: <Przelewy24 />,
+  },
+  "pp_stripe-blik_stripe": {
+    title: "BLIK",
+    icon: <Blik />,
+  },
+  "pp_stripe-apple-pay_stripe": {
+    title: "Apple Pay",
+    icon: <ApplePay />,
+  },
+  "pp_stripe-google-pay_stripe": {
+    title: "Google Pay",
+    icon: <GooglePay />,
+  },
+  "pp_stripe-paypal_stripe": {
+    title: "PayPal",
+    icon: <PayPal />,
   },
   "pp_stripe-ideal_stripe": {
     title: "iDeal",
@@ -35,15 +59,7 @@ export const paymentInfoMap: Record<
 
 // This only checks if it is native stripe for card payments, it ignores the other stripe-based providers
 export const isStripe = (providerId?: string) => {
-  paymentInfoMap["pp_stripe-przelewy24_stripe"] = {
-    title: "Przelewy24",
-    icon: <CreditCard />,
-  }
-  paymentInfoMap["pp_stripe-blik_stripe"] = {
-    title: "BLIK",
-    icon: <CreditCard />,
-  }
-  return providerId?.startsWith("pp_stripe_")
+  return providerId?.startsWith("pp_stripe_") ?? false
 }
 export const isPaypal = (providerId?: string) => {
   return providerId?.startsWith("pp_paypal")

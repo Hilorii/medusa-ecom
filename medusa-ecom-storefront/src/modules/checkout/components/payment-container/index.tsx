@@ -3,6 +3,7 @@ import { Text, clx } from "@medusajs/ui"
 import React, { useContext, useMemo, type JSX } from "react"
 
 import Radio from "@modules/common/components/radio"
+import Input from "@modules/common/components/input"
 
 import { isManual } from "@lib/constants"
 import SkeletonCardDetails from "@modules/skeletons/components/skeleton-card-details"
@@ -124,6 +125,62 @@ export const StripeCardContainer = ({
         ) : (
           <SkeletonCardDetails />
         ))}
+    </PaymentContainer>
+  )
+}
+export const StripeBlikContainer = ({
+  paymentProviderId,
+  selectedPaymentOptionId,
+  paymentInfoMap,
+  blikCode,
+  setBlikCode,
+  setBlikValid,
+}: Omit<PaymentContainerProps, "children"> & {
+  blikCode: string
+  setBlikCode: (code: string) => void
+  setBlikValid: (valid: boolean) => void
+}) => {
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value.replace(/\D/g, "").slice(0, 6)
+    setBlikCode(value)
+    setBlikValid(value.length === 6)
+  }
+
+  const isSelected = selectedPaymentOptionId === paymentProviderId
+  const showError = isSelected && blikCode.length > 0 && blikCode.length !== 6
+
+  return (
+    <PaymentContainer
+      paymentProviderId={paymentProviderId}
+      selectedPaymentOptionId={selectedPaymentOptionId}
+      paymentInfoMap={paymentInfoMap}
+    >
+      {isSelected && (
+        <div className="my-4 flex flex-col gap-y-2">
+          <Text className="txt-medium-plus text-ui-fg-base">
+            Enter your 6-digit BLIK code
+          </Text>
+          <Input
+            label="BLIK code"
+            name="blik-code"
+            inputMode="numeric"
+            value={blikCode}
+            onChange={handleChange}
+            maxLength={6}
+            autoComplete="one-time-code"
+            pattern="\\d{6}"
+            required
+          />
+          <Text className="txt-small text-ui-fg-subtle">
+            Confirm the payment in your banking app after submitting the code.
+          </Text>
+          {showError && (
+            <Text className="text-ui-fg-error text-small">
+              BLIK code must be 6 digits.
+            </Text>
+          )}
+        </div>
+      )}
     </PaymentContainer>
   )
 }

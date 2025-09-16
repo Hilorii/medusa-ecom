@@ -8,10 +8,12 @@ import { Button, Container, Heading, Text, clx } from "@medusajs/ui"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import PaymentContainer, {
   StripeCardContainer,
+  StripeBlikContainer,
 } from "@modules/checkout/components/payment-container"
 import Divider from "@modules/common/components/divider"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCheckoutPayment } from "@modules/checkout/context/payment-context"
 
 const Payment = ({
   cart,
@@ -23,14 +25,22 @@ const Payment = ({
   const activeSession = cart.payment_collection?.payment_sessions?.find(
     (paymentSession: any) => paymentSession.status === "pending"
   )
+  const shippingMethodCount = cart?.shipping_methods?.length ?? 0
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [cardBrand, setCardBrand] = useState<string | null>(null)
-  const [cardComplete, setCardComplete] = useState(false)
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
-    activeSession?.provider_id ?? ""
-  )
+  const {
+    selectedPaymentMethod,
+    setSelectedPaymentMethod,
+    cardBrand,
+    setCardBrand,
+    isCardComplete,
+    setIsCardComplete,
+    blikCode,
+    setBlikCode,
+    isBlikValid,
+    setIsBlikValid,
+  } = useCheckoutPayment()
 
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -38,6 +48,8 @@ const Payment = ({
 
   const isOpen = searchParams.get("step") === "payment"
   const isStripe = isStripeFunc(selectedPaymentMethod)
+  const isCardPayment = selectedPaymentMethod === "pp_stripe_stripe"
+  const isBlikPayment = selectedPaymentMethod === "pp_stripe-blik_stripe"
 
   // Helper: refresh page so server components re-fetch cart and Stripe client_secret appears
   const refreshCart = () => {
@@ -48,6 +60,16 @@ const Payment = ({
   const setPaymentMethod = async (method: string) => {
     setError(null)
     setSelectedPaymentMethod(method)
+
+    if (method !== "pp_stripe_stripe") {
+      setCardBrand(null)
+      setIsCardComplete(false)
+    }
+
+    if (method !== "pp_stripe-blik_stripe") {
+      setBlikCode("")
+      setIsBlikValid(false)
+    }
 
     // If Stripe or other providers that need a session immediately -> create it and refresh
     if (isStripeFunc(method)) {
@@ -66,8 +88,10 @@ const Payment = ({
   const paidByGiftcard =
     cart?.gift_cards && cart?.gift_cards?.length > 0 && cart?.total === 0
 
-  const paymentReady =
-    (activeSession && cart?.shipping_methods.length !== 0) || paidByGiftcard
+  const paymentReady = useMemo(
+    () => (activeSession && shippingMethodCount !== 0) || paidByGiftcard,
+    [activeSession, shippingMethodCount, paidByGiftcard]
+  )
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
@@ -88,8 +112,7 @@ const Payment = ({
   const handleSubmit = async () => {
     setIsLoading(true)
     try {
-      const shouldInputCard =
-        isStripeFunc(selectedPaymentMethod) && !activeSession
+      const shouldInputCard = isCardPayment && !activeSession
 
       const checkActiveSession =
         activeSession?.provider_id === selectedPaymentMethod
@@ -159,14 +182,23 @@ const Payment = ({
               >
                 {availablePaymentMethods.map((paymentMethod) => (
                   <div key={paymentMethod.id}>
-                    {isStripeFunc(paymentMethod.id) ? (
+                    {paymentMethod.id === "pp_stripe_stripe" ? (
                       <StripeCardContainer
                         paymentProviderId={paymentMethod.id}
                         selectedPaymentOptionId={selectedPaymentMethod}
                         paymentInfoMap={paymentInfoMap}
                         setCardBrand={setCardBrand}
                         setError={setError}
-                        setCardComplete={setCardComplete}
+                        setCardComplete={setIsCardComplete}
+                      />
+                    ) : paymentMethod.id === "pp_stripe-blik_stripe" ? (
+                      <StripeBlikContainer
+                        paymentProviderId={paymentMethod.id}
+                        selectedPaymentOptionId={selectedPaymentMethod}
+                        paymentInfoMap={paymentInfoMap}
+                        blikCode={blikCode}
+                        setBlikCode={setBlikCode}
+                        setBlikValid={setIsBlikValid}
                       />
                     ) : (
                       <PaymentContainer
@@ -206,7 +238,8 @@ const Payment = ({
             onClick={handleSubmit}
             isLoading={isLoading}
             disabled={
-              (isStripe && !cardComplete) ||
+              (isCardPayment && !isCardComplete) ||
+              (isBlikPayment && !isBlikValid) ||
               (!selectedPaymentMethod && !paidByGiftcard)
             }
             data-testid="submit-payment-button"
@@ -246,9 +279,10 @@ const Payment = ({
                     )}
                   </Container>
                   <Text>
-                    {isStripeFunc(selectedPaymentMethod) && cardBrand
+                    {isCardPayment && cardBrand
                       ? cardBrand
-                      : "Another step will appear"}
+                      : paymentInfoMap[selectedPaymentMethod]?.title ??
+                        "Another step will appear"}
                   </Text>
                 </div>
               </div>

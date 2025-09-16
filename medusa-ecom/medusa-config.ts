@@ -46,6 +46,16 @@ module.exports = defineConfig({
               automatic_payment_methods: true,
             },
           },
+          {
+            resolve: "./src/modules/stripe-extended",
+            id: "stripe",
+            options: {
+              apiKey: process.env.STRIPE_API_KEY,
+              capture: true,
+              automaticPaymentMethods: true,
+              automatic_payment_methods: true,
+            },
+          },
           // you can add next providers here Stripe (P24/iDEAL/Bancontact)
         ],
       },

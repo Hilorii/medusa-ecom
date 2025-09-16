@@ -11,9 +11,12 @@ import {
   setCartCookie,
 } from "@lib/client/gg-store"
 
+// NEW: bottom-sheet component
+import DesignGenerateComponent from "./design-generate-component"
+
 /**
  * Medusa v2 integrations:
- * - GET  /store/designs/config
+ * - GET /store/designs/config
  * - POST /store/designs/price
  * - POST /store/designs/upload
  * - POST /store/designs/add
@@ -27,7 +30,6 @@ import {
  */
 
 // ---------------- Types ----------------
-
 type StepId = "size" | "artwork" | "flavor" | "color" | "summary"
 
 type Artwork =
@@ -51,31 +53,27 @@ type FlavorDef = OptionCommon & { priceDelta: number; intensity?: number }
 type ColorDef = OptionCommon & { swatch: string; hue: number }
 
 // ---------------- Incompatibility map ----------------
-
 /**
  * Define incompatible color sets per material (flavor).
  * Extend this map as needed.
  */
 const INCOMPATIBLE: Record<string, string[]> = {
   galaxy: ["white"],
-  // example: "shadow": ["green", "red"]
+  // example:
+  // "shadow": ["green", "red"]
 }
 
 // ---------------- Utils ----------------
-
 const STORAGE_KEY = "design-your-own-v4"
-
 function cx(...c: (string | false | undefined)[]) {
   return c.filter(Boolean).join(" ")
 }
-
 /** Returns true if a given color is blocked by the selected flavor. */
 function isColorBlockedByFlavor(flavorId?: string, colorId?: string) {
   if (!flavorId || !colorId) return false
   const dis = INCOMPATIBLE[flavorId]
   return Array.isArray(dis) && dis.includes(colorId)
 }
-
 /** Extracts a cart id from various server response shapes. */
 function extractCartId(resp: any): string | undefined {
   if (resp?.cart_id) return String(resp.cart_id)
@@ -86,9 +84,11 @@ function extractCartId(resp: any): string | undefined {
 }
 
 // ---------------- Component ----------------
-
 export default function DesignPage() {
   const router = useRouter()
+
+  // NEW: modal open state
+  const [genOpen, setGenOpen] = useState(false)
 
   // Config from backend
   const [currency, setCurrency] = useState<"€" | "EUR">("€")
@@ -110,7 +110,7 @@ export default function DesignPage() {
 
         // Build size map; prefix with 's' to keep UI ids (e.g. "s21x21")
         const sizeMap: Record<string, SizeDef> = {}
-        cfg.options.size.forEach((s) => {
+        cfg.options.size.forEach((s: any) => {
           const [w, h] = s.id.split("x")
           sizeMap[`s${s.id}`] = {
             id: `s${s.id}`,
@@ -124,7 +124,7 @@ export default function DesignPage() {
 
         // Materials -> flavors in UI
         const flMap: Record<string, FlavorDef> = {}
-        cfg.options.material.forEach((m) => {
+        cfg.options.material.forEach((m: any) => {
           flMap[m.id] = {
             id: m.id,
             label: m.label,
@@ -137,7 +137,7 @@ export default function DesignPage() {
 
         // Colors
         const colMap: Record<string, ColorDef> = {}
-        cfg.options.color.forEach((c) => {
+        cfg.options.color.forEach((c: any) => {
           colMap[c.id] = {
             id: c.id,
             label: c.label,
@@ -227,7 +227,6 @@ export default function DesignPage() {
     (active === "flavor" && !!sel.flavor) ||
     (active === "color" && !!sel.color) ||
     active === "summary"
-
   const goNext = () =>
     setActive(order[Math.min(order.length - 1, order.indexOf(active) + 1)])
   const goPrev = () => setActive(order[Math.max(0, order.indexOf(active) - 1)])
@@ -266,7 +265,6 @@ export default function DesignPage() {
   // Artwork handling
   const ACCEPT = ".png,.jpg,.jpeg,.webp"
   const MAX_MB = 6
-
   function onPickExample(name: "example1.png" | "example2.png") {
     setArtError(null)
     const url = `/${name}` // asset in /public
@@ -275,11 +273,9 @@ export default function DesignPage() {
       art: { source: "example", name, dataUrl: url },
     }))
   }
-
   function onUploadFile(file?: File | null) {
     setArtError(null)
     if (!file) return
-
     const okExt = ACCEPT.split(",").some((ext) =>
       file.name.toLowerCase().endsWith(ext.trim())
     )
@@ -287,13 +283,11 @@ export default function DesignPage() {
       setArtError("Allowed formats: .png, .jpg, .jpeg, .webp")
       return
     }
-
     const maxBytes = MAX_MB * 1024 * 1024
     if (file.size > maxBytes) {
       setArtError(`Max file size is ${MAX_MB} MB`)
       return
     }
-
     const reader = new FileReader()
     reader.onload = () => {
       const dataUrl = String(reader.result || "")
@@ -315,7 +309,6 @@ export default function DesignPage() {
       // 1) Upload artwork if needed
       let fileUrl: string | undefined
       let fileName: string | undefined
-
       if (sel.art.source === "upload") {
         const up = await uploadArtwork({
           file_base64: sel.art.dataUrl,
@@ -361,7 +354,6 @@ export default function DesignPage() {
   const sizeOptions = Object.values(sizes)
   const flavorOptions = Object.values(flavors)
   const colorOptions = Object.values(colors)
-
   const doneCount =
     Number(!!sel.size) +
     Number(!!sel.art) +
@@ -369,7 +361,6 @@ export default function DesignPage() {
     Number(!!sel.color)
 
   // ---------------- Render ----------------
-
   return (
     <main className="dy-wrap">
       <div className="dy-content">
@@ -438,8 +429,7 @@ export default function DesignPage() {
                           <span className="dy-bullet" aria-hidden />
                           <span className="dy-option-text">{opt.label}</span>
                           <span className="dy-price">
-                            {currency}
-                            {opt.basePrice}
+                            {currency} {opt.basePrice}
                           </span>
                         </label>
                       )
@@ -464,6 +454,7 @@ export default function DesignPage() {
                         <p className="dy-subtle">
                           Accepted: PNG, JPG, WEBP (max 6MB)
                         </p>
+
                         <label className="dy-upload-btn">
                           <input
                             type="file"
@@ -516,8 +507,6 @@ export default function DesignPage() {
                                 <span className="dy-example-thumb">
                                   <img src={`/${name}`} alt={name} />
                                 </span>
-                                {/* Name of example file under the photo. */}
-                                {/*<span className="dy-example-name">{name}</span>*/}
                               </button>
                             )
                           }
@@ -526,18 +515,18 @@ export default function DesignPage() {
                     </div>
                   </div>
 
-                  {/* Generate (placeholder) */}
+                  {/* Generate */}
                   <div className="dy-generate">
                     <div className="dy-generate-title">Generate artwork</div>
                     <p className="dy-subtle">
                       Prototype only — not implemented yet.
                     </p>
+
+                    {/* CHANGED: open the bottom-sheet instead of alert */}
                     <button
                       type="button"
                       className="dy-btn dy-btn-generate"
-                      onClick={() =>
-                        alert("The generation feature is a placeholder 🙂")
-                      }
+                      onClick={() => setGenOpen(true)}
                       aria-label="Generate artwork"
                     >
                       Generate
@@ -554,7 +543,7 @@ export default function DesignPage() {
                     <p className="dy-subtle">Surface and effect</p>
                   </header>
                   <div className="dy-options">
-                    {Object.values(flavors).map((opt) => {
+                    {flavorOptions.map((opt) => {
                       const checked = sel.flavor === opt.id
                       return (
                         <label
@@ -572,8 +561,7 @@ export default function DesignPage() {
                           <span className="dy-option-text">{opt.label}</span>
                           {opt.priceDelta ? (
                             <span className="dy-price">
-                              +{currency}
-                              {opt.priceDelta}
+                              +{currency} {opt.priceDelta}
                             </span>
                           ) : (
                             <span className="dy-price">Included</span>
@@ -593,7 +581,7 @@ export default function DesignPage() {
                     <p className="dy-subtle">LED accent color</p>
                   </header>
                   <div className="dy-swatches">
-                    {Object.values(colors).map((opt) => {
+                    {colorOptions.map((opt) => {
                       const disabled = isColorBlockedByFlavor(
                         sel.flavor,
                         opt.id
@@ -647,6 +635,7 @@ export default function DesignPage() {
                   <header className="dy-card-header">
                     <h2>Summary</h2>
                   </header>
+
                   <dl className="dy-summary" aria-live="polite">
                     <div>
                       <dt>Artwork</dt>
@@ -673,11 +662,11 @@ export default function DesignPage() {
                     <div className="dy-summary-total">
                       <dt>Total</dt>
                       <dd>
-                        {currency}
-                        {livePriceEur || 0}
+                        {currency} {livePriceEur || 0}
                       </dd>
                     </div>
                   </dl>
+
                   <div className="dy-actions">
                     <button
                       className="dy-btn dy-btn-secondary"
@@ -757,6 +746,12 @@ export default function DesignPage() {
           </div>
         </section>
       </div>
+
+      {/* NEW: bottom sheet portal */}
+      <DesignGenerateComponent
+        open={genOpen}
+        onClose={() => setGenOpen(false)}
+      />
     </main>
   )
 }

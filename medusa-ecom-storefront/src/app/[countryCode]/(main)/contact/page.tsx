@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 }
 
 export default function ContactPage() {
-  const mail = "hilori.furan@wp.pl"
+  const mail = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev"
 
   return (
     <div className="contact-section">

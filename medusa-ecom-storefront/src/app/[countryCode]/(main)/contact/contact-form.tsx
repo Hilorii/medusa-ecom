@@ -1,3 +1,4 @@
+// contact-form.tsx
 "use client"
 
 import { FormEvent, useState } from "react"
@@ -7,6 +8,12 @@ type ContactFormProps = {
 }
 
 type FormStatus = "idle" | "loading" | "success" | "error"
+
+const EMAIL_REGEX =
+  /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@([A-Za-z0-9-]+\.)+[A-Za-z]{2,}$/
+
+const EMAIL_PATTERN =
+  "[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@([A-Za-z0-9-]+\\.)+[A-Za-z]{2,}"
 
 export function ContactForm({ mail }: ContactFormProps) {
   const [status, setStatus] = useState<FormStatus>("idle")
@@ -24,6 +31,12 @@ export function ContactForm({ mail }: ContactFormProps) {
 
     if (!name || !email || !message) {
       setErrorMessage("Please fill in all required fields.")
+      setStatus("error")
+      return
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+      setErrorMessage("Please enter a valid email address.")
       setStatus("error")
       return
     }
@@ -94,6 +107,9 @@ export function ContactForm({ mail }: ContactFormProps) {
           required
           disabled={isSubmitting}
           autoComplete="email"
+          inputMode="email"
+          pattern={EMAIL_PATTERN}
+          title="Enter a valid email like name@example.com"
         />
         <label htmlFor="email" className="contact-label">
           Email address

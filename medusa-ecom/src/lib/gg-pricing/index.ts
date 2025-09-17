@@ -24,9 +24,71 @@ export function ggLoadPricing(): GGPricingTable {
 
 /** Convert euro value to minor units (cents). */
 function eurToCents(value: number): number {
-  // guard against floating point artifacts
-  // value * 100 here if needed for Medusa
-  return Math.round(value);
+  // guard against floating point artifacts by rounding to the nearest cent
+  return Math.round(value * 100);
+}
+
+/** Default FX rates used when env overrides are not provided. */
+const DEFAULT_FX: Record<GGCurrency, number> = {
+  EUR: 1,
+  USD: 1.08,
+  PLN: 4.3,
+};
+
+/** Resolve runtime-configurable FX rate for converting EUR → currency. */
+function resolveFxRate(currency: GGCurrency): number {
+  if (currency === "EUR") {
+    return 1;
+  }
+
+  const candidates = [
+    `GG_FX_${currency}`,
+    `GG_FX_RATE_${currency}`,
+    `GG_EUR_TO_${currency}`,
+  ];
+
+  for (const key of candidates) {
+    const raw = process.env[key];
+    if (!raw) continue;
+
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return DEFAULT_FX[currency] ?? 1;
+}
+
+/**
+ * Convert the provided EUR amount to the target currency in minor units.
+ * The amount is assumed to be expressed in whole euros, not cents.
+ */
+export function ggConvertEurToMinorUnits(
+  eurAmount: number,
+  currency: GGCurrency,
+): number {
+  const normalized = Number(eurAmount) || 0;
+  const rate = resolveFxRate(currency);
+  return eurToCents(normalized * rate);
+}
+
+/** Normalize incoming currency code (e.g., from regions) to GGCurrency. */
+export function ggNormalizeCurrency(code?: string | null): GGCurrency | null {
+  if (!code) {
+    return null;
+  }
+
+  const upper = code.toUpperCase();
+  if (upper === "EUR") return "EUR";
+  if (upper === "USD") return "USD";
+  if (upper === "PLN") return "PLN";
+  return null;
+}
+
+/** Expose FX rate for diagnostic purposes (e.g., metadata). */
+export function ggGetFxRate(currency: GGCurrency): number {
+  return resolveFxRate(currency);
 }
 
 /** Clamp helper. */

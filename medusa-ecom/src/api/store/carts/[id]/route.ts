@@ -35,6 +35,97 @@ type CustomLineItemSnapshot = {
   sales_channel_id?: string | null;
 };
 
+type ShippingAddressSnapshot = Record<string, unknown> | null;
+
+const SHIPPING_ADDRESS_FIELDS: Array<string> = [
+  "first_name",
+  "last_name",
+  "company",
+  "address_1",
+  "address_2",
+  "postal_code",
+  "city",
+  "province",
+  "phone",
+  "country_code",
+  "metadata",
+];
+
+async function prepareCustomItemsForRegionChange({
+  cartModule,
+  items,
+}: {
+  cartModule: any;
+  items: CustomLineItemSnapshot[];
+}) {
+  const updates = items
+    .filter((item) => item?.id)
+    .map((item) => {
+      const update: Record<string, unknown> = {
+        id: item.id,
+        is_custom_price: false,
+      };
+
+      if (item?.variant_id) {
+        update.variant_id = null;
+      }
+
+      return update;
+    });
+
+  if (!updates.length) {
+    return;
+  }
+
+  await cartModule.updateLineItems(updates as any);
+}
+
+async function restoreCustomItemsFromSnapshots({
+  cartModule,
+  snapshots,
+  reattachVariants = true,
+}: {
+  cartModule: any;
+  snapshots: CustomLineItemSnapshot[];
+  reattachVariants?: boolean;
+}) {
+  const updates = snapshots
+    .filter((item) => item?.id)
+    .map((item) => {
+      const update: Record<string, unknown> = {
+        id: item.id,
+        is_custom_price: true,
+      };
+
+      if (reattachVariants && typeof item.variant_id === "string") {
+        update.variant_id = item.variant_id;
+      }
+
+      if (
+        typeof item.unit_price === "number" &&
+        Number.isFinite(item.unit_price)
+      ) {
+        update.unit_price = item.unit_price;
+      }
+
+      if (item.metadata) {
+        update.metadata = cloneMetadata(item.metadata);
+      }
+
+      return update;
+    });
+
+  if (!updates.length) {
+    return;
+  }
+
+  try {
+    await cartModule.updateLineItems(updates as any);
+  } catch {
+    // If restoring fails there's nothing else we can do.
+  }
+}
+
 function isGuestEmailConflictError(error: unknown): error is MedusaError {
   if (!MedusaError.isMedusaError(error)) {
     return false;
@@ -91,6 +182,81 @@ async function resolveGuestEmailConflict(
   return true;
 }
 
+function isVariantPriceMissingError(error: unknown): boolean {
+  const message = (() => {
+    if (MedusaError.isMedusaError(error)) {
+      return error.message;
+    }
+
+    if (error && typeof error === "object" && "message" in error) {
+      return String((error as Record<string, unknown>).message ?? "");
+    }
+
+    if (typeof error === "string") {
+      return error;
+    }
+
+    return "";
+  })()
+    .toString()
+    .toLowerCase();
+
+  if (!message) {
+    return false;
+  }
+
+  return (
+    message.includes("do not have a price") ||
+    message.includes("does not have a price")
+  );
+}
+
+async function resolveVariantPricingError({
+  error,
+  cartModule,
+  snapshots,
+}: {
+  error: unknown;
+  cartModule: any;
+  snapshots: CustomLineItemSnapshot[];
+}): Promise<boolean> {
+  if (!isVariantPriceMissingError(error)) {
+    return false;
+  }
+
+  const updates = snapshots
+    .filter((item) => item?.id && typeof item.variant_id === "string")
+    .map((item) => {
+      const metadata = cloneMetadata(item.metadata);
+
+      if (metadata && typeof item.variant_id === "string") {
+        const metadataRecord = metadata as Record<string, unknown>;
+        if (typeof metadataRecord.variant_id !== "string") {
+          metadataRecord.variant_id = item.variant_id;
+        }
+      }
+
+      return {
+        id: item.id,
+        variant_id: null,
+        is_custom_price: true,
+        ...(metadata ? { metadata } : {}),
+      };
+    });
+
+  if (!updates.length) {
+    return false;
+  }
+
+  try {
+    await cartModule.updateLineItems(updates as any);
+  } catch {
+    return false;
+  }
+
+  return true;
+}
+
 function cloneMetadata(metadata: unknown): Record<string, unknown> | null {
   if (!metadata || typeof metadata !== "object") {
     return null;
@@ -101,6 +267,108 @@ function cloneMetadata(metadata: unknown): Record<string, unknown> | null {
   } catch {
     return { ...(metadata as Record<string, unknown>) };
   }
+}
+
+function cloneShippingAddress(address: unknown): ShippingAddressSnapshot {
+  if (!address || typeof address !== "object") {
+    return null;
+  }
+
+  const source = address as Record<string, unknown>;
+  const snapshot: Record<string, unknown> = {};
+
+  for (const field of SHIPPING_ADDRESS_FIELDS) {
+    if (!(field in source)) {
+      continue;
+    }
+
+    if (field === "metadata") {
+      const metadata = cloneMetadata(source[field]);
+      if (metadata) {
+        snapshot[field] = metadata;
+      }
+      continue;
+    }
+
+    const value = source[field];
+    if (typeof value === "undefined") {
+      continue;
+    }
+
+    if (typeof value === "string") {
+      snapshot[field] = value;
+      continue;
+    }
+
+    snapshot[field] = value === null ? null : value;
+  }
+
+  return Object.keys(snapshot).length ? snapshot : null;
+}
+
+function mergeShippingAddressSnapshots(
+  previous: ShippingAddressSnapshot,
+  next: ShippingAddressSnapshot,
+  options?: { skipFields?: string[] },
+): { merged: ShippingAddressSnapshot; changed: boolean } {
+  if (!previous && !next) {
+    return { merged: null, changed: false };
+  }
+
+  if (!next) {
+    if (!previous) {
+      return { merged: null, changed: false };
+    }
+
+    return { merged: { ...previous }, changed: true };
+  }
+
+  const merged: Record<string, unknown> = { ...next };
+  let changed = false;
+
+  const skip = new Set(options?.skipFields ?? []);
+
+  if (previous) {
+    for (const field of SHIPPING_ADDRESS_FIELDS) {
+      if (skip.has(field)) {
+        continue;
+      }
+
+      if (!(field in previous)) {
+        continue;
+      }
+
+      if (field === "metadata") {
+        if (!merged[field] && previous[field]) {
+          const metadata = cloneMetadata(previous[field]);
+          if (metadata) {
+            merged[field] = metadata;
+            changed = true;
+          }
+        }
+        continue;
+      }
+
+      const nextValue = merged[field];
+      if (
+        typeof nextValue === "undefined" ||
+        nextValue === null ||
+        (typeof nextValue === "string" && nextValue.trim() === "")
+      ) {
+        const previousValue = previous[field];
+        if (
+          typeof previousValue !== "undefined" &&
+          previousValue !== null &&
+          !(typeof previousValue === "string" && previousValue.trim() === "")
+        ) {
+          merged[field] = previousValue;
+          changed = true;
+        }
+      }
+    }
+  }
+
+  return { merged, changed };
 }
 
 function snapshotCustomLineItems(cart: any): CustomLineItemSnapshot[] {
@@ -191,9 +459,20 @@ async function restoreCustomItemsForRegionChange({
   }
 
   const rate = ggGetFxRate(currency);
-  const itemsToAdd: Array<any> = [];
+  const existingItemIds = new Set<string>(
+    (cart?.items ?? [])
+      .map((item: any) =>
+        item?.id && typeof item.id === "string" ? item.id : undefined,
+      )
+      .filter((id): id is string => typeof id === "string"),
+  );
+  const updates: Array<any> = [];
 
   for (const snapshot of snapshots) {
+    if (!snapshot?.id || !existingItemIds.has(snapshot.id)) {
+      continue;
+    }
+
     const metadataSource: Record<string, unknown> = snapshot.metadata
       ? { ...snapshot.metadata }
       : {};
@@ -216,70 +495,59 @@ async function restoreCustomItemsForRegionChange({
       }
     }
 
-    if (totalEur === null) {
-      continue;
-    }
-
-    const unitPrice = ggConvertEurToMinorUnits(totalEur, currency);
-    const quantity = snapshot.quantity > 0 ? snapshot.quantity : 1;
     const metadata: Record<string, unknown> = {
       ...metadataSource,
       currency,
       fx_rate: rate,
     };
 
+    if (
+      typeof snapshot.variant_id === "string" &&
+      typeof (metadata as any).variant_id !== "string"
+    ) {
+      (metadata as any).variant_id = snapshot.variant_id;
+    }
+
     if (!("breakdown" in metadata) && totalEur !== null) {
-      metadata["breakdown"] = { total_eur: totalEur };
+      (metadata as any)["breakdown"] = { total_eur: totalEur };
     } else if (
-      metadata["breakdown"] &&
-      typeof metadata["breakdown"] === "object" &&
+      (metadata as any)["breakdown"] &&
+      typeof (metadata as any)["breakdown"] === "object" &&
       totalEur !== null
     ) {
-      (metadata["breakdown"] as Record<string, unknown>)["total_eur"] =
+      ((metadata as any)["breakdown"] as Record<string, unknown>)["total_eur"] =
         totalEur;
     }
 
-    if (snapshot.id) {
-      metadata["previous_line_item_id"] = snapshot.id;
-    }
-
-    itemsToAdd.push({
-      title: snapshot.title || "Custom item",
-      quantity,
-      unit_price: unitPrice,
+    const update: Record<string, unknown> = {
+      id: snapshot.id,
       is_custom_price: true,
       metadata,
-      ...(snapshot.subtitle ? { subtitle: snapshot.subtitle } : {}),
-      ...(snapshot.thumbnail ? { thumbnail: snapshot.thumbnail } : {}),
-      ...(snapshot.product_id ? { product_id: snapshot.product_id } : {}),
-      ...(snapshot.product_title
-        ? { product_title: snapshot.product_title }
-        : {}),
-      ...(snapshot.product_description
-        ? { product_description: snapshot.product_description }
-        : {}),
-      ...(snapshot.product_subtitle
-        ? { product_subtitle: snapshot.product_subtitle }
-        : {}),
-      ...(snapshot.variant_id ? { variant_id: snapshot.variant_id } : {}),
-      ...(snapshot.variant_title
-        ? { variant_title: snapshot.variant_title }
-        : {}),
-      ...(snapshot.variant_sku ? { variant_sku: snapshot.variant_sku } : {}),
-      ...(typeof snapshot.requires_shipping === "boolean"
-        ? { requires_shipping: snapshot.requires_shipping }
-        : {}),
-      ...(snapshot.sales_channel_id
-        ? { sales_channel_id: snapshot.sales_channel_id }
-        : {}),
+    };
+
+    if (totalEur !== null) {
+      update.unit_price = ggConvertEurToMinorUnits(totalEur, currency);
+    } else if (
+      typeof snapshot.unit_price === "number" &&
+      Number.isFinite(snapshot.unit_price)
+    ) {
+      update.unit_price = snapshot.unit_price;
+    }
+
+    updates.push(update);
+  }
+
+  if (!updates.length) {
+    await restoreCustomItemsFromSnapshots({
+      cartModule,
+      snapshots,
+      reattachVariants: false,
     });
+    const refreshedFallback = await refetchCart(effectiveCartId, scope, fields);
+    return refreshedFallback ?? cart;
   }
 
-  if (!itemsToAdd.length) {
-    return cart;
-  }
-
-  await cartModule.addLineItems(effectiveCartId, itemsToAdd as any);
+  await cartModule.updateLineItems(updates as any);
 
   const refreshed = await refetchCart(effectiveCartId, scope, fields);
   return refreshed ?? cart;
@@ -323,7 +591,7 @@ async function repriceCustomItemsForRegion({
     }
 
     const metadata = { ...(item.metadata || {}) };
-    const breakdown: any = metadata.breakdown;
+    const breakdown: any = (metadata as any).breakdown;
     const totalEur = breakdown?.total_eur;
     if (typeof totalEur !== "number" || !Number.isFinite(totalEur)) {
       continue;
@@ -331,8 +599,8 @@ async function repriceCustomItemsForRegion({
 
     const nextUnitPrice = ggConvertEurToMinorUnits(totalEur, currency);
     const currentCurrency =
-      typeof metadata.currency === "string"
-        ? metadata.currency.toUpperCase()
+      typeof (metadata as any).currency === "string"
+        ? (metadata as any).currency.toUpperCase()
         : undefined;
 
     if (nextUnitPrice === item.unit_price && currentCurrency === currency) {
@@ -361,6 +629,49 @@ async function repriceCustomItemsForRegion({
   return refreshed ?? cart;
 }
 
+async function restoreShippingAddressAfterRegionChange({
+  cart,
+  cartModule,
+  previousShippingAddress,
+  scope,
+  fields,
+}: {
+  cart: any;
+  cartModule: any;
+  previousShippingAddress: ShippingAddressSnapshot;
+  scope: MedusaRequest["scope"];
+  fields: any;
+}) {
+  if (!cart?.id || !previousShippingAddress) {
+    return cart;
+  }
+
+  const currentSnapshot = cloneShippingAddress(cart.shipping_address);
+  const { merged, changed } = mergeShippingAddressSnapshots(
+    previousShippingAddress,
+    currentSnapshot,
+    { skipFields: ["country_code", "province"] },
+  );
+
+  if (!changed || !merged) {
+    return cart;
+  }
+
+  try {
+    await cartModule.updateCarts([
+      {
+        id: cart.id,
+        shipping_address: merged,
+      },
+    ]);
+  } catch {
+    return cart;
+  }
+
+  const refreshed = await refetchCart(cart.id, scope, fields);
+  return refreshed ?? { ...cart, shipping_address: merged };
+}
+
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const cart = await refetchCart(
     req.params.id,
@@ -381,15 +692,18 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
   let previousRegionId: string | undefined;
   let previousCustomItems: CustomLineItemSnapshot[] = [];
+  let previousShippingAddress: ShippingAddressSnapshot = null;
   try {
     const existing = await cartModule.retrieveCart(req.params.id, {
-      relations: ["items"],
+      relations: ["items", "shipping_address"],
     });
     previousRegionId = existing?.region_id;
     previousCustomItems = snapshotCustomLineItems(existing);
+    previousShippingAddress = cloneShippingAddress(existing?.shipping_address);
   } catch {
     previousRegionId = undefined;
     previousCustomItems = [];
+    previousShippingAddress = null;
   }
 
   const workflowInput = {
@@ -406,20 +720,69 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       input: workflowInput,
     });
 
-  try {
-    await runUpdateCart();
-  } catch (error) {
-    const handled = await resolveGuestEmailConflict(
-      error,
-      req,
-      typeof normalizedEmail === "string" ? normalizedEmail : undefined,
-    );
+  const requestedRegionId =
+    typeof body.region_id === "string" ? body.region_id : undefined;
+  const regionWillChange =
+    typeof requestedRegionId === "string" &&
+    (!!previousRegionId ? requestedRegionId !== previousRegionId : true);
 
-    if (!handled) {
-      throw error;
+  if (regionWillChange && previousCustomItems.length) {
+    await prepareCustomItemsForRegionChange({
+      cartModule,
+      items: previousCustomItems,
+    });
+  }
+
+  let updateSuccessful = false;
+  let lastError: unknown = null;
+
+  try {
+    let attempts = 0;
+    const maxAttempts = 3 + previousCustomItems.length;
+
+    while (attempts < maxAttempts && !updateSuccessful) {
+      attempts += 1;
+
+      try {
+        await runUpdateCart();
+        updateSuccessful = true;
+      } catch (error) {
+        lastError = error;
+
+        const handledGuest = await resolveGuestEmailConflict(
+          error,
+          req,
+          typeof normalizedEmail === "string" ? normalizedEmail : undefined,
+        );
+
+        if (handledGuest) {
+          continue;
+        }
+
+        const handledVariantPricing = await resolveVariantPricingError({
+          error,
+          cartModule,
+          snapshots: previousCustomItems,
+        });
+
+        if (handledVariantPricing) {
+          continue;
+        }
+
+        throw error;
+      }
     }
 
-    await runUpdateCart();
+    if (!updateSuccessful) {
+      throw lastError ?? new Error("Failed to update cart");
+    }
+  } finally {
+    if (!updateSuccessful && regionWillChange && previousCustomItems.length) {
+      await restoreCustomItemsFromSnapshots({
+        cartModule,
+        snapshots: previousCustomItems,
+      });
+    }
   }
 
   let cart = await refetchCart(
@@ -452,6 +815,16 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
         cart,
         cartModule,
         regionModule,
+        scope: req.scope,
+        fields: req.queryConfig.fields,
+      });
+    }
+
+    if (previousShippingAddress) {
+      cart = await restoreShippingAddressAfterRegionChange({
+        cart,
+        cartModule,
+        previousShippingAddress,
         scope: req.scope,
         fields: req.queryConfig.fields,
       });

@@ -11,6 +11,7 @@ import React, {
   useTransition,
 } from "react"
 import { updateCartRegionByCountry } from "@lib/data/cart"
+import compareAddresses from "@lib/util/compare-addresses"
 import AddressSelect from "../address-select"
 import CountrySelect from "../country-select"
 
@@ -50,6 +51,10 @@ const ShippingAddress = ({
   const previousCountry = useRef<string | undefined>(
     cart?.shipping_address?.country_code || undefined
   )
+  const previousCartShippingAddress = useRef<
+    HttpTypes.StoreCartAddress | null | undefined
+  >(cart?.shipping_address)
+  const previousCartEmail = useRef<string | undefined>(cart?.email ?? undefined)
 
   const shippingCountry = formData["shipping_address.country_code"] as
     | string
@@ -95,15 +100,37 @@ const ShippingAddress = ({
   }
 
   useEffect(() => {
-    // Ensure cart is not null and has a shipping_address before setting form data
-    if (cart && cart.shipping_address) {
-      setFormAddress(cart?.shipping_address, cart?.email)
+    if (!cart) {
+      previousCartShippingAddress.current = undefined
+      previousCartEmail.current = undefined
+      return
     }
 
-    if (cart && !cart.email && customer?.email) {
+    const cartShippingAddress = cart.shipping_address
+    const prevShippingAddress = previousCartShippingAddress.current
+
+    const shippingAddressChanged = (() => {
+      if (cartShippingAddress && prevShippingAddress) {
+        return !compareAddresses(cartShippingAddress, prevShippingAddress)
+      }
+
+      return cartShippingAddress !== prevShippingAddress
+    })()
+
+    if (shippingAddressChanged) {
+      setFormAddress(cartShippingAddress ?? undefined, cart.email)
+    } else if (cart.email && cart.email !== previousCartEmail.current) {
+      setFormData((prevState: Record<string, any>) => ({
+        ...prevState,
+        email: cart.email ?? "",
+      }))
+    } else if (!cart.email && customer?.email) {
       setFormAddress(undefined, customer.email)
     }
-  }, [cart]) // Add cart as a dependency
+
+    previousCartShippingAddress.current = cartShippingAddress
+    previousCartEmail.current = cart.email ?? undefined
+  }, [cart, customer?.email])
 
   const handleChange = (
     e: React.ChangeEvent<

@@ -1,5 +1,5 @@
 import { Heading, Text } from "@medusajs/ui"
-import Link from "next/link"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import "./empty-cart.css"
 
 /**
@@ -34,12 +34,12 @@ const EmptyCartMessage = () => {
 
       <div className="gg-empty-cart-cta">
         {/* Primary CTA */}
-        <Link
+        <LocalizedClientLink
           href="/design"
           className="gg-empty-cart-btn gg-empty-cart-btn--primary"
         >
           Design your own product
-        </Link>
+        </LocalizedClientLink>
       </div>
 
       {/* Helpful tips to make the empty state engaging */}

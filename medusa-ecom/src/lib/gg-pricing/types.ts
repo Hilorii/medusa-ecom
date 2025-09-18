@@ -1,50 +1,47 @@
-export type GGCurrency = "EUR" | "USD" | "PLN"; // easy to extend later
+export type GGCurrency = "EUR" | "USD" | "GBP" | "PLN"; // easy to extend later
 
-export type GGSize =
-    | "21x21"
-    | "36x14"
-    | "36x21";
+export type GGSize = "21x21" | "36x14" | "36x21";
 
 export type GGMaterial =
-    | "clear"
-    | "shadow"
-    | "aurora"
-    | "iridescent"
-    | "galaxy";
+  | "clear"
+  | "shadow"
+  | "aurora"
+  | "iridescent"
+  | "galaxy";
 
 export type GGColor =
-    | "black"
-    | "grey"
-    | "white"
-    | "red"
-    | "green"
-    | "blue"
-    | "brown";
+  | "black"
+  | "grey"
+  | "white"
+  | "red"
+  | "green"
+  | "blue"
+  | "brown";
 
 export type GGSelections = {
-    size: GGSize;
-    material: GGMaterial;
-    color: GGColor;
-    qty?: number; // default 1
+  size: GGSize;
+  material: GGMaterial;
+  color: GGColor;
+  qty?: number; // default 1
 };
 
 export type GGPricingTable = {
-    currency: GGCurrency;
-    sizes: Record<GGSize, number>;     // euro
-    materials: Record<GGMaterial, number>; // euro
-    colors: Record<GGColor, number>;   // euro
-    qty: { min: number; max: number };
+  currency: GGCurrency;
+  sizes: Record<GGSize, number>; // euro
+  materials: Record<GGMaterial, number>; // euro
+  colors: Record<GGColor, number>; // euro
+  qty: { min: number; max: number };
 };
 
 export type GGPriceResult = {
-    currency: GGCurrency;
-    unit_price: number; // in minor units (cents)
-    subtotal: number;   // unit_price * qty (cents)
-    qty: number;
-    breakdown: {
-        base_eur: number;
-        material_eur: number;
-        color_eur: number;
-        total_eur: number;
-    };
+  currency: GGCurrency;
+  unit_price: number; // in minor units (cents)
+  subtotal: number; // unit_price * qty (cents)
+  qty: number;
+  breakdown: {
+    base_eur: number;
+    material_eur: number;
+    color_eur: number;
+    total_eur: number;
+  };
 };

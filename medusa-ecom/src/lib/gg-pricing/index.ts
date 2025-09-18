@@ -32,6 +32,7 @@ function eurToCents(value: number): number {
 const DEFAULT_FX: Record<GGCurrency, number> = {
   EUR: 1,
   USD: 1.08,
+  GBP: 0.86,
   PLN: 4.3,
 };
 
@@ -82,6 +83,7 @@ export function ggNormalizeCurrency(code?: string | null): GGCurrency | null {
   const upper = code.toUpperCase();
   if (upper === "EUR") return "EUR";
   if (upper === "USD") return "USD";
+  if (upper === "GBP") return "GBP";
   if (upper === "PLN") return "PLN";
   return null;
 }

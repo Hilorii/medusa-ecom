@@ -100,6 +100,7 @@ export default function DesignPage() {
   const [active, setActive] = useState<StepId>("size")
   const [sel, setSel] = useState<Selections>({})
   const [artError, setArtError] = useState<string | null>(null)
+  const [cartId, setCartId] = useState<string | null>(null)
 
   // Load config once
   useEffect(() => {
@@ -190,6 +191,30 @@ export default function DesignPage() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(sel))
     } catch {}
   }, [sel])
+
+  useEffect(() => {
+    let cancelled = false
+
+    ;(async () => {
+      try {
+        const res = await fetch("/api/gg/cart/id", { cache: "no-store" })
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        const value =
+          typeof data?.cart_id === "string" && data.cart_id.length
+            ? data.cart_id
+            : null
+        setCartId(value)
+      } catch (err) {
+        console.warn("[gg] Failed to read cart id", err)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Selected option objects
   const size = sel.size ? sizes[sel.size] : undefined
@@ -329,12 +354,14 @@ export default function DesignPage() {
         qty: 1,
         fileName,
         fileUrl,
+        cartId: cartId || undefined,
       })
 
       // 3) Persist cart cookie and refresh UI
-      const cartId = extractCartId(cartResp)
-      if (cartId) {
-        await setCartCookie(cartId)
+      const nextCartId = extractCartId(cartResp)
+      if (nextCartId) {
+        setCartId(nextCartId)
+        await setCartCookie(nextCartId)
         router.refresh()
         router.push("/cart")
       } else {

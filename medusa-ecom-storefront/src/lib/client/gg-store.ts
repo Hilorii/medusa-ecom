@@ -157,6 +157,7 @@ export function addDesignToCart(body: {
   qty?: number
   fileName?: string
   fileUrl?: string
+  cartId?: string
 }) {
   return jfetch<any>("/store/designs/add", {
     method: "POST",

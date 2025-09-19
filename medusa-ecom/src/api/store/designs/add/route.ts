@@ -14,6 +14,7 @@ import type { GGSelections } from "../../../../lib/gg-pricing/types";
 type Body = GGSelections & {
   fileName?: string;
   fileUrl?: string;
+  cartId?: string;
 };
 
 const PRODUCT_HANDLE = process.env.GG_PRODUCT_HANDLE || "design-your-own";
@@ -25,14 +26,15 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     console.log("[gg:add] A: hit /store/designs/add");
 
     // B) Parse + basic validation
-    const { size, material, color, qty, fileName, fileUrl } = (req.body ||
-      {}) as Body;
+    const { size, material, color, qty, fileName, fileUrl, cartId } =
+      (req.body || {}) as Body;
     console.log("[gg:add] B: body", {
       size,
       material,
       color,
       qty,
       hasFileUrl: !!fileUrl,
+      hasCartId: !!cartId,
     });
 
     const validation = ggValidateSelections({ size, material, color, qty });
@@ -60,27 +62,52 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     const cartModule = req.scope.resolve(Modules.CART);
     const regionModule = req.scope.resolve(Modules.REGION);
 
-    // E) Region (EUR)
-    console.log("[gg:add] F: listRegions(currency=eur)");
-    const eurRegions = await regionModule.listRegions({ currency_code: "eur" });
-    if (!eurRegions?.length) {
-      console.error("[gg:add] F!: no EUR region configured");
-      return res
-        .status(500)
-        .json({ code: "no_region", message: "No EUR region configured." });
+    // E) Reuse provided cart if possible
+    let cart: any | undefined;
+    if (cartId) {
+      console.log("[gg:add] F: retrieveCart(cartId)", cartId);
+      try {
+        const retrieved = await cartModule.retrieveCart(cartId);
+        if (retrieved?.completed_at) {
+          console.warn("[gg:add] F1: provided cart completed", cartId);
+        } else if (retrieved) {
+          cart = retrieved;
+          console.log("[gg:add] F2: using provided cart", cart.id);
+        } else {
+          console.warn("[gg:add] F1: provided cart not found", cartId);
+        }
+      } catch (err) {
+        console.warn("[gg:add] F!: failed to retrieve provided cart", err);
+      }
     }
-    const region = eurRegions[0];
-    console.log("[gg:add] F1: using region", region.id);
 
-    // F) Product + variant
-    console.log("[gg:add] G: listProducts(handle)", PRODUCT_HANDLE);
+    // F) Region (EUR) only if we don't already have a cart
+    let region: any | undefined;
+    if (!cart) {
+      console.log("[gg:add] G: listRegions(currency=eur)");
+      const eurRegions = await regionModule.listRegions({
+        currency_code: "eur",
+      });
+      if (!eurRegions?.length) {
+        console.error("[gg:add] G!: no EUR region configured");
+        return res.status(500).json({
+          code: "no_region",
+          message: "No EUR region configured.",
+        });
+      }
+      region = eurRegions[0];
+      console.log("[gg:add] G1: using region", region.id);
+    }
+
+    // G) Product + variant
+    console.log("[gg:add] H: listProducts(handle)", PRODUCT_HANDLE);
     const [product] = await productModule.listProducts(
       { handle: [PRODUCT_HANDLE] },
       { relations: ["variants"] }, // keep it lean; no heavy relations
     );
     if (!product) {
       console.error(
-        "[gg:add] G!: product not found by handle:",
+        "[gg:add] H!: product not found by handle:",
         PRODUCT_HANDLE,
       );
       return res.status(404).json({
@@ -92,7 +119,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       (v: any) => v.title === VARIANT_TITLE,
     );
     if (!variant) {
-      console.error("[gg:add] G!: variant not found by title:", VARIANT_TITLE);
+      console.error("[gg:add] H!: variant not found by title:", VARIANT_TITLE);
       return res.status(500).json({
         code: "variant_not_found",
         message: "Custom variant not found.",
@@ -101,38 +128,48 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     const pKey: any = (req as any).publishable_key_context;
     const salesChannelId: string | undefined = pKey?.sales_channel_ids?.[0];
     console.log(
-      "[gg:add] G1: product/variant/sales_channel",
+      "[gg:add] H1: product/variant/sales_channel",
       product.id,
       variant.id,
       salesChannelId,
     );
 
-    // G) Reuse or create cart (guest flow)
-    console.log("[gg:add] H: listCarts(region_id, sales_channel_id)");
-
-    const existing = await cartModule.listCarts({
-      region_id: region.id,
-      ...(salesChannelId ? { sales_channel_id: salesChannelId } : {}),
-      // @ts-ignore
-      completed_at: null,
-    });
-    let cart = existing?.[0];
+    // H) Reuse or create cart (guest flow) if not already resolved
     if (!cart) {
-      console.log("[gg:add] H1: createCarts(...)");
-      const created = await cartModule.createCarts([
-        {
-          region_id: region.id,
-          currency_code: "eur",
-          ...(salesChannelId ? { sales_channel_id: salesChannelId } : {}),
-        } as any,
-      ]);
-      cart = created[0];
-      console.log("[gg:add] H2: created cart", cart.id);
-    } else {
-      console.log("[gg:add] H2: reused cart", cart.id);
+      console.log("[gg:add] I: listCarts(region_id, sales_channel_id)");
+
+      const existing = await cartModule.listCarts({
+        region_id: region!.id,
+        ...(salesChannelId ? { sales_channel_id: salesChannelId } : {}),
+        // @ts-ignore
+        completed_at: null,
+      });
+      cart = existing?.[0];
+      if (!cart) {
+        console.log("[gg:add] I1: createCarts(...)");
+        const created = await cartModule.createCarts([
+          {
+            region_id: region!.id,
+            currency_code: "eur",
+            ...(salesChannelId ? { sales_channel_id: salesChannelId } : {}),
+          } as any,
+        ]);
+        cart = created[0];
+        console.log("[gg:add] I2: created cart", cart.id);
+      } else {
+        console.log("[gg:add] I2: reused cart", cart.id);
+      }
+    }
+    console.log("[gg:add] I3: final cart", cart?.id);
+
+    if (!cart) {
+      console.error("[gg:add] I!: failed to resolve cart");
+      return res
+        .status(500)
+        .json({ code: "cart_unavailable", message: "Unable to resolve cart." });
     }
 
-    // H) Add line item
+    // I) Add line item
     console.log("[gg:add] I: addLineItems");
     await cartModule.addLineItems(cart.id, [
       {
@@ -158,7 +195,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     ]);
     console.log("[gg:add] I1: line item added");
 
-    // I) Return lean JSON (avoid serializing the full cart object)
+    // J) Return lean JSON (avoid serializing the full cart object)
     console.log("[gg:add] J: returning lean payload");
     return res.json({ ok: true, cart_id: cart.id });
 

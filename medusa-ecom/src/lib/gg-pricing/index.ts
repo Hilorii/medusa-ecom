@@ -138,8 +138,9 @@ export function ggCalculatePrice(
   const mat = table.materials[material];
   const col = table.colors[color];
   const totalEur = base + mat + col;
+  const fxRate = currency === "EUR" ? 1 : ggGetFxRate(currency);
 
-  const unit_price = eurToCents(totalEur);
+  const unit_price = ggConvertEurToMinorUnits(totalEur, currency);
   const subtotal = unit_price * qty;
 
   return {
@@ -147,6 +148,7 @@ export function ggCalculatePrice(
     unit_price,
     subtotal,
     qty,
+    fx_rate: fxRate,
     breakdown: {
       base_eur: base,
       material_eur: mat,

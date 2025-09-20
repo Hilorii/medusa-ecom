@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import "./design.css"
 import {
@@ -48,9 +48,41 @@ type Selections = {
 }
 
 type OptionCommon = { id: string; label: string }
-type SizeDef = OptionCommon & { wCm: number; hCm: number; basePrice: number }
-type FlavorDef = OptionCommon & { priceDelta: number; intensity?: number }
+type SizeDef = OptionCommon & { wCm: number; hCm: number; basePriceEur: number }
+type FlavorDef = OptionCommon & {
+  priceDeltaEur: number
+  intensity?: number
+}
 type ColorDef = OptionCommon & { swatch: string; hue: number }
+
+type CurrencyCode = "EUR" | "USD" | "GBP" | "PLN"
+
+const FALLBACK_CURRENCY: CurrencyCode = "EUR"
+const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
+  EUR: "€",
+  USD: "$",
+  GBP: "£",
+  PLN: "zł",
+}
+
+function normalizeCurrencyCode(raw?: string | null): CurrencyCode {
+  if (!raw) return FALLBACK_CURRENCY
+  const value = String(raw).trim()
+  if (!value) return FALLBACK_CURRENCY
+
+  const upper = value.toUpperCase()
+  if (upper === "EUR" || value === "€") return "EUR"
+  if (upper === "USD" || value === "$") return "USD"
+  if (upper === "GBP" || value === "£") return "GBP"
+  if (upper === "PLN" || upper === "ZŁ" || value.toLowerCase() === "zł")
+    return "PLN"
+
+  return FALLBACK_CURRENCY
+}
+
+function symbolForCurrency(code: CurrencyCode): string {
+  return CURRENCY_SYMBOLS[code] || code
+}
 
 // ---------------- Incompatibility map ----------------
 /**
@@ -91,7 +123,10 @@ export default function DesignPage() {
   const [genOpen, setGenOpen] = useState(false)
 
   // Config from backend
-  const [currency, setCurrency] = useState<"€" | "EUR">("€")
+  const [currencyCode, setCurrencyCode] = useState<CurrencyCode>("EUR")
+  const [fxRate, setFxRate] = useState(1)
+  const fxRateRef = useRef(1)
+  const currencySymbol = symbolForCurrency(currencyCode)
   const [sizes, setSizes] = useState<Record<string, SizeDef>>({})
   const [flavors, setFlavors] = useState<Record<string, FlavorDef>>({})
   const [colors, setColors] = useState<Record<string, ColorDef>>({})
@@ -102,12 +137,19 @@ export default function DesignPage() {
   const [artError, setArtError] = useState<string | null>(null)
   const [cartId, setCartId] = useState<string | null>(null)
 
+  useEffect(() => {
+    fxRateRef.current = fxRate
+  }, [fxRate])
+
+  const convertEurToDisplay = (value: number) =>
+    Math.round((Number(value) || 0) * fxRate)
+
   // Load config once
   useEffect(() => {
     ;(async () => {
       try {
         const cfg = await getDesignConfig()
-        setCurrency(cfg.currency === "EUR" ? "€" : (cfg.currency as any))
+        setCurrencyCode(normalizeCurrencyCode(cfg.currency))
 
         // Build size map; prefix with 's' to keep UI ids (e.g. "s21x21")
         const sizeMap: Record<string, SizeDef> = {}
@@ -118,7 +160,7 @@ export default function DesignPage() {
             label: s.label || s.id.replace("x", " × "),
             wCm: Number(w) || 16,
             hCm: Number(h) || 9,
-            basePrice: s.price_eur,
+            basePriceEur: s.price_eur,
           }
         })
         setSizes(sizeMap)
@@ -129,7 +171,7 @@ export default function DesignPage() {
           flMap[m.id] = {
             id: m.id,
             label: m.label,
-            priceDelta: m.surcharge_eur,
+            priceDeltaEur: m.surcharge_eur,
             intensity:
               m.id === "shadow" ? 0.45 : m.id === "galaxy" ? 1.0 : 0.55,
           }
@@ -222,11 +264,11 @@ export default function DesignPage() {
   const color = sel.color ? colors[sel.color] : undefined
 
   // Live price from backend (only when we have all required selections)
-  const [livePriceEur, setLivePriceEur] = useState<number>(0)
+  const [livePrice, setLivePrice] = useState<number>(0)
   useEffect(() => {
     ;(async () => {
       if (!size || !flavor || !color) {
-        setLivePriceEur(0)
+        setLivePrice(0)
         return
       }
       try {
@@ -236,13 +278,27 @@ export default function DesignPage() {
           material: flavor.id, // flavor -> material
           color: color.id,
           qty: 1,
+          cartId: cartId || undefined,
         })
-        setLivePriceEur(Math.round(p.breakdown.total_eur))
+        const nextCurrency = normalizeCurrencyCode(p.currency)
+        const nextRate =
+          Number.isFinite(p.fx_rate) && Number(p.fx_rate) > 0
+            ? Number(p.fx_rate)
+            : 1
+
+        fxRateRef.current = nextRate
+        setCurrencyCode(nextCurrency)
+        setFxRate((prev) =>
+          Math.abs(prev - nextRate) < 0.0001 ? prev : nextRate
+        )
+        setLivePrice(Math.round((p.breakdown.total_eur || 0) * nextRate))
       } catch {
-        setLivePriceEur((size?.basePrice || 0) + (flavor?.priceDelta || 0))
+        const fallbackEur =
+          (size?.basePriceEur || 0) + (flavor?.priceDeltaEur || 0)
+        setLivePrice(Math.round(fallbackEur * fxRateRef.current))
       }
     })()
-  }, [size?.id, flavor?.id, color?.id])
+  }, [size?.id, flavor?.id, color?.id, cartId])
 
   // Steps nav / progress
   const order: StepId[] = ["size", "artwork", "flavor", "color", "summary"]
@@ -456,7 +512,8 @@ export default function DesignPage() {
                           <span className="dy-bullet" aria-hidden />
                           <span className="dy-option-text">{opt.label}</span>
                           <span className="dy-price">
-                            {currency} {opt.basePrice}
+                            {currencySymbol}{" "}
+                            {convertEurToDisplay(opt.basePriceEur)}
                           </span>
                         </label>
                       )
@@ -586,9 +643,10 @@ export default function DesignPage() {
                           />
                           <span className="dy-bullet" aria-hidden />
                           <span className="dy-option-text">{opt.label}</span>
-                          {opt.priceDelta ? (
+                          {opt.priceDeltaEur ? (
                             <span className="dy-price">
-                              +{currency} {opt.priceDelta}
+                              +{currencySymbol}{" "}
+                              {convertEurToDisplay(opt.priceDeltaEur)}
                             </span>
                           ) : (
                             <span className="dy-price">Included</span>
@@ -689,7 +747,7 @@ export default function DesignPage() {
                     <div className="dy-summary-total">
                       <dt>Total</dt>
                       <dd>
-                        {currency} {livePriceEur || 0}
+                        {currencySymbol} {livePrice || 0}
                       </dd>
                     </div>
                   </dl>

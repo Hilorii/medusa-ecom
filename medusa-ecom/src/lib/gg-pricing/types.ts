@@ -38,6 +38,7 @@ export type GGPriceResult = {
   unit_price: number; // in minor units (cents)
   subtotal: number; // unit_price * qty (cents)
   qty: number;
+  fx_rate: number; // EUR -> currency multiplier used for this calculation
   breakdown: {
     base_eur: number;
     material_eur: number;

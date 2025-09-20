@@ -98,7 +98,7 @@ async function jfetch<T>(path: string, init?: RequestInit): Promise<T> {
 /** GET options + base pricing to render UI */
 export function getDesignConfig() {
   return jfetch<{
-    currency: "EUR"
+    currency: "EUR" | "USD" | "GBP" | "PLN"
     qty: { min: number; max: number }
     options: {
       size: { id: string; label: string; price_eur: number }[]
@@ -114,12 +114,14 @@ export function previewPrice(body: {
   material: string
   color: string
   qty?: number
+  cartId?: string
 }) {
   return jfetch<{
-    currency: "EUR"
+    currency: "EUR" | "USD" | "GBP" | "PLN"
     unit_price: number
     subtotal: number
     qty: number
+    fx_rate: number
     breakdown: {
       base_eur: number
       material_eur: number

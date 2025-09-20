@@ -269,6 +269,112 @@ function cloneMetadata(metadata: unknown): Record<string, unknown> | null {
   }
 }
 
+// gg: Re-attach custom item variants after region change, keeping metadata in sync
+async function reattachCustomItemVariants({
+  cartId,
+  cart,
+  snapshots,
+  cartModule,
+  scope,
+  fields,
+}: {
+  cartId: string;
+  cart: any;
+  snapshots: CustomLineItemSnapshot[];
+  cartModule: any;
+  scope: MedusaRequest["scope"];
+  fields: any;
+}) {
+  if (!snapshots?.length) {
+    return cart;
+  }
+
+  const effectiveCartId = cart?.id ?? cartId;
+  if (!effectiveCartId) {
+    return cart;
+  }
+
+  const desiredVariants = new Map<string, string>();
+  for (const snapshot of snapshots) {
+    if (!snapshot?.id || typeof snapshot.variant_id !== "string") {
+      continue;
+    }
+    desiredVariants.set(snapshot.id, snapshot.variant_id);
+  }
+
+  if (!desiredVariants.size) {
+    return cart;
+  }
+
+  const updates: Array<Record<string, unknown>> = [];
+
+  for (const item of cart?.items ?? []) {
+    if (!item?.id) {
+      continue;
+    }
+
+    const desiredVariantId = desiredVariants.get(item.id);
+    if (!desiredVariantId) {
+      // gg: If custom line has no variant, ensure shipping is skipped
+      const update: Record<string, unknown> = { id: item.id };
+      const md = cloneMetadata(item.metadata) || {};
+      if (typeof (md as any).requires_shipping !== "boolean") {
+        (md as any).requires_shipping = false;
+        update.metadata = md;
+        updates.push(update);
+      }
+      continue;
+    }
+
+    let needsUpdate = false;
+    const update: Record<string, unknown> = { id: item.id };
+
+    if (item.variant_id !== desiredVariantId) {
+      update.variant_id = desiredVariantId;
+      needsUpdate = true;
+    }
+
+    if (item.is_custom_price !== true) {
+      update.is_custom_price = true;
+      needsUpdate = true;
+    }
+
+    const metadata = cloneMetadata(item.metadata);
+    if (!metadata) {
+      update.metadata = { variant_id: desiredVariantId };
+      needsUpdate = true;
+    } else {
+      const metadataRecord = metadata as Record<string, unknown>;
+      const currentVariant =
+        typeof metadataRecord["variant_id"] === "string"
+          ? (metadataRecord["variant_id"] as string)
+          : undefined;
+
+      if (currentVariant !== desiredVariantId) {
+        update.metadata = { ...metadataRecord, variant_id: desiredVariantId };
+        needsUpdate = true;
+      }
+    }
+
+    if (needsUpdate) {
+      updates.push(update);
+    }
+  }
+
+  if (!updates.length) {
+    return cart;
+  }
+
+  try {
+    await cartModule.updateLineItems(updates as any);
+  } catch {
+    return cart;
+  }
+
+  const refreshed = await refetchCart(effectiveCartId, scope, fields);
+  return refreshed ?? cart;
+}
+
 function cloneShippingAddress(address: unknown): ShippingAddressSnapshot {
   if (!address || typeof address !== "object") {
     return null;
@@ -525,6 +631,11 @@ async function restoreCustomItemsForRegionChange({
       metadata,
     };
 
+    // gg: Re-attach variant if snapshot had it
+    if (typeof snapshot.variant_id === "string") {
+      update.variant_id = snapshot.variant_id;
+    }
+
     if (totalEur !== null) {
       update.unit_price = ggConvertEurToMinorUnits(totalEur, currency);
     } else if (
@@ -532,6 +643,15 @@ async function restoreCustomItemsForRegionChange({
       Number.isFinite(snapshot.unit_price)
     ) {
       update.unit_price = snapshot.unit_price;
+    }
+
+    // gg: If this is a pure custom line (no variant), make sure shipping is skipped
+    if (typeof snapshot.variant_id !== "string") {
+      const md = (update.metadata as Record<string, unknown>) || {};
+      if (typeof (md as any).requires_shipping !== "boolean") {
+        (md as any).requires_shipping = false;
+      }
+      update.metadata = md;
     }
 
     updates.push(update);
@@ -547,7 +667,19 @@ async function restoreCustomItemsForRegionChange({
     return refreshedFallback ?? cart;
   }
 
-  await cartModule.updateLineItems(updates as any);
+  try {
+    await cartModule.updateLineItems(updates as any);
+  } catch (error) {
+    const handledVariantPricing = await resolveVariantPricingError({
+      error,
+      cartModule,
+      snapshots,
+    });
+
+    if (!handledVariantPricing) {
+      throw error;
+    }
+  }
 
   const refreshed = await refetchCart(effectiveCartId, scope, fields);
   return refreshed ?? cart;
@@ -594,6 +726,18 @@ async function repriceCustomItemsForRegion({
     const breakdown: any = (metadata as any).breakdown;
     const totalEur = breakdown?.total_eur;
     if (typeof totalEur !== "number" || !Number.isFinite(totalEur)) {
+      // gg: If custom line has no breakdown and also no variant, ensure shipping is skipped
+      if (!item.variant_id) {
+        const md = { ...(item.metadata || {}) };
+        if (typeof (md as any).requires_shipping !== "boolean") {
+          (md as any).requires_shipping = false;
+          updates.push({
+            id: item.id,
+            is_custom_price: true,
+            metadata: md,
+          });
+        }
+      }
       continue;
     }
 
@@ -604,10 +748,29 @@ async function repriceCustomItemsForRegion({
         : undefined;
 
     if (nextUnitPrice === item.unit_price && currentCurrency === currency) {
+      // gg: still ensure requires_shipping=false for pure custom
+      if (!item.variant_id) {
+        const md = { ...(item.metadata || {}) };
+        if (typeof (md as any).requires_shipping !== "boolean") {
+          (md as any).requires_shipping = false;
+          updates.push({
+            id: item.id,
+            is_custom_price: true,
+            metadata: md,
+          });
+        }
+      }
       continue;
     }
 
-    updates.push({
+    if (
+      typeof item.variant_id === "string" &&
+      typeof (metadata as any).variant_id !== "string"
+    ) {
+      (metadata as any).variant_id = item.variant_id;
+    }
+
+    const update: Record<string, unknown> = {
       id: item.id,
       unit_price: nextUnitPrice,
       is_custom_price: true,
@@ -616,7 +779,20 @@ async function repriceCustomItemsForRegion({
         currency,
         fx_rate: rate,
       },
-    });
+    };
+
+    if (typeof item.variant_id === "string") {
+      update.variant_id = item.variant_id;
+    } else {
+      // gg: Explicitly mark non-variant customs as non-shippable
+      const md = (update.metadata as Record<string, unknown>) || {};
+      if (typeof (md as any).requires_shipping !== "boolean") {
+        (md as any).requires_shipping = false;
+      }
+      update.metadata = md;
+    }
+
+    updates.push(update);
   }
 
   if (!updates.length) {
@@ -670,6 +846,34 @@ async function restoreShippingAddressAfterRegionChange({
 
   const refreshed = await refetchCart(cart.id, scope, fields);
   return refreshed ?? { ...cart, shipping_address: merged };
+}
+
+// gg: Force-hydrate cart with all relations required by shipping validation
+async function ggHydrateCartWithRelations({
+  cartId,
+  cartModule,
+}: {
+  cartId: string;
+  cartModule: any;
+}) {
+  try {
+    const hydrated = await cartModule.retrieveCart(cartId, {
+      relations: [
+        "region",
+        "billing_address",
+        "shipping_address",
+        "items",
+        "items.variant",
+        "items.variant.product", // critical for validate-shipping
+        "items.adjustments",
+        "shipping_methods",
+        "payment_collection",
+      ],
+    });
+    return hydrated;
+  } catch {
+    return null;
+  }
 }
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
@@ -829,6 +1033,30 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
         fields: req.queryConfig.fields,
       });
     }
+  }
+
+  if (previousCustomItems.length) {
+    cart = await reattachCustomItemVariants({
+      cartId: req.params.id,
+      cart,
+      snapshots: previousCustomItems,
+      cartModule,
+      scope: req.scope,
+      fields: req.queryConfig.fields,
+    });
+  }
+
+  // gg: Final hydration to ensure variant.product is present for shipping validation
+  try {
+    const hydrated = await ggHydrateCartWithRelations({
+      cartId: req.params.id,
+      cartModule,
+    });
+    if (hydrated) {
+      cart = hydrated;
+    }
+  } catch {
+    // ignore; cart still valid with defensive flags on custom lines
   }
 
   res.status(200).json({ cart });

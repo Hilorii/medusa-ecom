@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getCacheTag } from "@lib/data/cookies"
+import { getCacheTag, sharedCookieSecurity } from "@lib/data/cookies"
 import { revalidateTag } from "next/cache"
 
 export async function POST() {
@@ -14,8 +14,7 @@ export async function POST() {
 
   res.cookies.set("_medusa_cart_id", "", {
     httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
+    ...sharedCookieSecurity,
     maxAge: -1,
     path: "/",
   })

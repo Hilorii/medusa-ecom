@@ -6,6 +6,10 @@ import { placeOrder } from "@lib/client/cart"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@medusajs/ui"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
+import type {
+  ConfirmBlikPaymentData,
+  PaymentMethodCreateParams,
+} from "@stripe/stripe-js"
 import React, { useState } from "react"
 import ErrorMessage from "../error-message"
 import { useRouter, useParams } from "next/navigation"
@@ -104,7 +108,7 @@ const StripePaymentButton = ({
 
   const disabled = !stripe || !elements ? true : false
 
-  const billingDetails = {
+  const billingDetails: PaymentMethodCreateParams.BillingDetails = {
     name:
       (
         (cart.billing_address?.first_name || "") +
@@ -174,16 +178,19 @@ const StripePaymentButton = ({
       throw new Error("Enter a valid 6-digit BLIK code")
     }
 
+    const blikPaymentData: ConfirmBlikPaymentData = {
+      payment_method: {
+        blik: {},
+        billing_details: billingDetails,
+      },
+      payment_method_options: {
+        blik: { code: blikCode },
+      },
+    }
+
     const { error, paymentIntent } = await stripe.confirmBlikPayment(
       ensureClientSecret(),
-      {
-        payment_method: {
-          billing_details: billingDetails,
-        },
-        payment_method_options: {
-          blik: { code: blikCode },
-        },
-      }
+      blikPaymentData
     )
 
     if (error) {

@@ -1,6 +1,22 @@
 import "server-only"
 import { cookies as nextCookies } from "next/headers"
 
+const isProduction = process.env.NODE_ENV === "production"
+/**
+ * Third-party payment providers often redirect back via cross-site POST requests.
+ * Use SameSite=None in production so cart/auth cookies survive that round-trip.
+ * Browsers reject SameSite=None without Secure over HTTP, so fall back to Lax locally.
+ */
+export const sharedSameSite = (isProduction ? "none" : "lax") as
+  | "lax"
+  | "strict"
+  | "none"
+
+export const sharedCookieSecurity = {
+  sameSite: sharedSameSite,
+  secure: isProduction,
+} as const
+
 /**
  * Returns headers for server-side requests to Medusa Store API.
  * - Always attaches the publishable key as "x-publishable-api-key"
@@ -78,8 +94,7 @@ export const setAuthToken = async (token: string) => {
   cookies.set("_medusa_jwt", token, {
     maxAge: 60 * 60 * 24 * 7, // 7 days
     httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
+    ...sharedCookieSecurity,
     path: "/",
   })
 }
@@ -111,8 +126,7 @@ export const setCartId = async (cartId: string) => {
   cookies.set("_medusa_cart_id", cartId, {
     maxAge: 60 * 60 * 24 * 7, // 7 days
     httpOnly: true,
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
+    ...sharedCookieSecurity,
     path: "/",
   })
 }

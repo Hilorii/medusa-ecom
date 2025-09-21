@@ -8,11 +8,12 @@ import { Button } from "@medusajs/ui"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
 import type {
   ConfirmBlikPaymentData,
+  PaymentIntent,
   PaymentMethodCreateParams,
 } from "@stripe/stripe-js"
-import React, { useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import ErrorMessage from "../error-message"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { useCheckoutPayment } from "@modules/checkout/context/payment-context"
 
 type PaymentButtonProps = {
@@ -72,9 +73,10 @@ const StripePaymentButton = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const router = useRouter()
   const { countryCode } = useParams() as { countryCode: string }
+  const searchParams = useSearchParams()
   const { selectedPaymentMethod, blikCode, isBlikValid } = useCheckoutPayment()
 
-  const onPaymentCompleted = async () => {
+  const onPaymentCompleted = useCallback(async () => {
     // ⬇️ Use cart.id when placing the order
     await placeOrder(cart.id)
       .then((res) => {
@@ -90,7 +92,7 @@ const StripePaymentButton = ({
       .finally(() => {
         setSubmitting(false)
       })
-  }
+  }, [cart.id, countryCode, router])
 
   const stripe = useStripe()
   const elements = useElements()
@@ -107,6 +109,75 @@ const StripePaymentButton = ({
     )
 
   const disabled = !stripe || !elements ? true : false
+
+  const ensureClientSecret = useCallback(() => {
+    const secret = session?.data?.client_secret as string | undefined
+    if (!secret) {
+      throw new Error("Missing Stripe client secret for the payment session")
+    }
+    return secret
+  }, [session])
+
+  const waitForPaymentIntent = useCallback(
+    async (
+      clientSecret: string,
+      initialIntent?: PaymentIntent | null
+    ): Promise<PaymentIntent> => {
+      if (!stripe) {
+        throw new Error("Stripe is not ready to process this payment")
+      }
+
+      let intent: PaymentIntent | null = initialIntent ?? null
+      let attempt = 0
+      const maxAttempts = 10
+
+      while (attempt <= maxAttempts) {
+        if (intent) {
+          const status = intent.status
+          if (status === "requires_capture" || status === "succeeded") {
+            return intent
+          }
+
+          if (status !== "processing") {
+            return intent
+          }
+        }
+
+        if (attempt === maxAttempts) {
+          if (!intent) {
+            throw new Error("Failed to retrieve payment status")
+          }
+          return intent
+        }
+
+        await new Promise((resolve) =>
+          setTimeout(resolve, attempt === 0 ? 0 : 1500)
+        )
+
+        const { paymentIntent, error } = await stripe.retrievePaymentIntent(
+          clientSecret
+        )
+
+        if (error) {
+          throw new Error(error.message || "Failed to retrieve payment status")
+        }
+
+        if (!paymentIntent) {
+          throw new Error("Failed to retrieve payment status")
+        }
+
+        intent = paymentIntent
+        attempt += 1
+      }
+
+      if (!intent) {
+        throw new Error("Failed to retrieve payment status")
+      }
+
+      return intent
+    },
+    [stripe]
+  )
 
   const billingDetails: PaymentMethodCreateParams.BillingDetails = {
     name:
@@ -127,13 +198,6 @@ const StripePaymentButton = ({
     phone: cart.billing_address?.phone ?? undefined,
   }
 
-  const ensureClientSecret = () => {
-    const secret = session?.data?.client_secret as string | undefined
-    if (!secret) {
-      throw new Error("Missing Stripe client secret for the payment session")
-    }
-    return secret
-  }
   const handleCardPayment = async () => {
     if (!stripe || !elements || !card || !cart) {
       throw new Error("Stripe is not ready to process card payments")
@@ -218,9 +282,10 @@ const StripePaymentButton = ({
       throw new Error("Stripe is not ready to process Przelewy24 payments")
     }
 
+    const clientSecret = ensureClientSecret()
     const returnUrl = `${window.location.origin}/${countryCode}/checkout?step=review`
     const { error, paymentIntent } = await stripe.confirmP24Payment(
-      ensureClientSecret(),
+      clientSecret,
       {
         payment_method: {
           // @ts-ignore
@@ -235,22 +300,35 @@ const StripePaymentButton = ({
 
     if (error) {
       const pi = error.payment_intent
-      if (
-        (pi && pi.status === "requires_capture") ||
-        (pi && pi.status === "succeeded")
-      ) {
-        await onPaymentCompleted()
+      if (pi) {
+        const finalIntent = await waitForPaymentIntent(clientSecret, pi)
+        if (
+          finalIntent.status === "requires_capture" ||
+          finalIntent.status === "succeeded"
+        ) {
+          await onPaymentCompleted()
+          return
+        }
       }
       throw new Error(error.message || "Przelewy24 payment failed")
     }
 
+    const finalIntent = await waitForPaymentIntent(clientSecret, paymentIntent)
+
     if (
-      paymentIntent &&
-      (paymentIntent.status === "requires_capture" ||
-        paymentIntent.status === "succeeded")
+      finalIntent.status === "requires_capture" ||
+      finalIntent.status === "succeeded"
     ) {
       await onPaymentCompleted()
+      return
     }
+
+    if (finalIntent.status === "processing") {
+      throw new Error(
+        "Payment is still processing. Please wait a moment and try again."
+      )
+    }
+    throw new Error("Przelewy24 payment did not complete. Please try again.")
   }
 
   const handleStripePayPal = async () => {
@@ -258,9 +336,10 @@ const StripePaymentButton = ({
       throw new Error("Stripe is not ready to process PayPal payments")
     }
 
+    const clientSecret = ensureClientSecret()
     const returnUrl = `${window.location.origin}/${countryCode}/checkout?step=review`
     const { error, paymentIntent } = await stripe.confirmPayPalPayment(
-      ensureClientSecret(),
+      clientSecret,
       {
         return_url: returnUrl,
         payment_method: {
@@ -271,22 +350,35 @@ const StripePaymentButton = ({
 
     if (error) {
       const pi = error.payment_intent
-      if (
-        (pi && pi.status === "requires_capture") ||
-        (pi && pi.status === "succeeded")
-      ) {
-        await onPaymentCompleted()
+      if (pi) {
+        const finalIntent = await waitForPaymentIntent(clientSecret, pi)
+        if (
+          finalIntent.status === "requires_capture" ||
+          finalIntent.status === "succeeded"
+        ) {
+          await onPaymentCompleted()
+          return
+        }
       }
       throw new Error(error.message || "PayPal payment failed")
     }
 
+    const finalIntent = await waitForPaymentIntent(clientSecret, paymentIntent)
+
     if (
-      paymentIntent &&
-      (paymentIntent.status === "requires_capture" ||
-        paymentIntent.status === "succeeded")
+      finalIntent.status === "requires_capture" ||
+      finalIntent.status === "succeeded"
     ) {
       await onPaymentCompleted()
+      return
     }
+    if (finalIntent.status === "processing") {
+      throw new Error(
+        "Payment is still processing. Please wait a moment and try again."
+      )
+    }
+
+    throw new Error("PayPal payment did not complete. Please try again.")
   }
 
   const handleWalletPayment = async (wallet: "apple" | "google") => {
@@ -372,6 +464,93 @@ const StripePaymentButton = ({
 
     paymentRequest.show()
   }
+
+  const redirectHandledRef = useRef(false)
+
+  useEffect(() => {
+    if (!stripe) {
+      return
+    }
+
+    if (!session) {
+      return
+    }
+
+    if (!searchParams) {
+      return
+    }
+
+    if (redirectHandledRef.current) {
+      return
+    }
+
+    if (searchParams.get("step") !== "review") {
+      return
+    }
+
+    const redirectStatus = searchParams.get("redirect_status")
+    if (!redirectStatus) {
+      return
+    }
+
+    const providerId = session.provider_id
+
+    if (
+      providerId !== "pp_stripe-paypal_stripe" &&
+      providerId !== "pp_stripe-przelewy24_stripe"
+    ) {
+      return
+    }
+
+    const secretFromUrl =
+      searchParams.get("payment_intent_client_secret") ?? undefined
+
+    let clientSecret: string
+    if (secretFromUrl) {
+      clientSecret = secretFromUrl
+    } else {
+      try {
+        clientSecret = ensureClientSecret()
+      } catch {
+        return
+      }
+    }
+
+    redirectHandledRef.current = true
+    setSubmitting(true)
+    setErrorMessage(null)
+
+    waitForPaymentIntent(clientSecret)
+      .then((intent) => {
+        if (
+          intent.status === "requires_capture" ||
+          intent.status === "succeeded"
+        ) {
+          return onPaymentCompleted()
+        }
+
+        if (intent.status === "processing") {
+          setErrorMessage(
+            "Payment is still processing. Please wait a moment and click Place order again."
+          )
+        } else {
+          setErrorMessage("We couldn't confirm your payment. Please try again.")
+        }
+      })
+      .catch((err: any) => {
+        setErrorMessage(err.message || "Payment failed")
+      })
+      .finally(() => {
+        setSubmitting(false)
+      })
+  }, [
+    ensureClientSecret,
+    onPaymentCompleted,
+    searchParams,
+    session,
+    stripe,
+    waitForPaymentIntent,
+  ])
 
   const handlePayment = async () => {
     setSubmitting(true)

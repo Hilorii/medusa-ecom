@@ -89,20 +89,21 @@
 .dy-price{ font-weight:700; color:#fff; text-shadow:0 0 12px hsla(0 0% 100% / .2); }
 .dy-bullet{ width:18px; height:18px; border-radius:999px; box-shadow:inset 0 0 0 2px rgba(255,255,255,.6); background: radial-gradient(circle at 50% 50%, #fff 0 0, transparent 60%); mix-blend-mode:screen; }
 
-/* swatches */
-.dy-swatches{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; }
-@media (min-width:560px){ .dy-swatches{ grid-template-columns:repeat(4, minmax(0,1fr)); } }
-.dy-swatch{
-    position:relative; display:grid; grid-template-columns:auto 1fr; align-items:center; gap:10px;
-    padding:10px 12px; border-radius:14px; border:1px solid var(--dy-card-bd); background:rgba(255,255,255,.03);
-    transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
+/* color options */
+.dy-options-color{ grid-template-columns:1fr; }
+@media (min-width:520px){ .dy-options-color{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.dy-option-color{
+    grid-template-columns:22px 1fr auto;
+    gap:12px;
 }
-.dy-swatch:hover{ transform:translateY(-1px); border-color:rgba(255,255,255,.2); }
-.dy-swatch.is-selected{ box-shadow:0 0 0 2px var(--dy-accent) inset, 0 8px 24px rgba(0,0,0,.25); background:rgba(255,255,255,.06); }
-.dy-swatch.is-disabled{ opacity:.55; filter:grayscale(.3); cursor:not-allowed; }
-.dy-swatch input{ position:absolute; inset:0; opacity:0; pointer-events:none; }
-.dy-swatch-dot{ width:22px; height:22px; border-radius:999px; border:2px solid rgba(255,255,255,.75); box-shadow:0 0 20px rgba(255,255,255,.25) inset, 0 0 16px rgba(255,255,255,.25); }
-.dy-swatch-label{ font-weight:600; }
+.dy-color-dot{
+    width:22px;
+    height:22px;
+    border-radius:999px;
+    border:2px solid rgba(255,255,255,.75);
+    box-shadow:0 0 20px rgba(255,255,255,.25) inset, 0 0 16px rgba(255,255,255,.25);
+}
+.dy-option-color .dy-option-text{ font-weight:600; }
 
 /* summary */
 .dy-summary{ display:grid; gap:10px; margin:6px 2px 2px; }
@@ -262,10 +263,10 @@
 }
 
 /* ====== Disabled color tooltip ====== */
-.dy-swatch.is-disabled{
+.dy-option-color.is-disabled{
     position: relative;
 }
-.dy-swatch.is-disabled::after{
+.dy-option-color.is-disabled::after{
     content: attr(data-tooltip);
     position: absolute;
     left: 50%;
@@ -283,11 +284,11 @@
     pointer-events: none;
     transition: opacity .12s ease, transform .12s ease;
 }
-.dy-swatch.is-disabled:hover::after{
+.dy-option-color.is-disabled:hover::after{
     opacity: 1;
     transform: translateX(-50%) translateY(-2px);
 }
-.dy-swatch.is-disabled::before{
+.dy-option-color.is-disabled::before{
     content: "";
     position: absolute;
     left: 50%;
@@ -300,4 +301,4 @@
     opacity: 0;
     transition: opacity .12s ease;
 }
-.dy-swatch.is-disabled:hover::before{ opacity: 1; }
+.dy-option-color.is-disabled:hover::before{ opacity: 1; }

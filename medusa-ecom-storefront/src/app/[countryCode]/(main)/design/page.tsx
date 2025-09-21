@@ -53,7 +53,11 @@ type FlavorDef = OptionCommon & {
   priceDeltaEur: number
   intensity?: number
 }
-type ColorDef = OptionCommon & { swatch: string; hue: number }
+type ColorDef = OptionCommon & {
+  swatch: string
+  hue: number
+  priceDeltaEur: number
+}
 
 type CurrencyCode = "EUR" | "USD" | "GBP" | "PLN"
 
@@ -212,6 +216,7 @@ export default function DesignPage() {
                 : c.id === "white"
                 ? 0
                 : 270,
+            priceDeltaEur: c.surcharge_eur,
           }
         })
         setColors(colMap)
@@ -665,7 +670,7 @@ export default function DesignPage() {
                     <h2>Choose a color</h2>
                     <p className="dy-subtle">LED accent color</p>
                   </header>
-                  <div className="dy-swatches">
+                  <div className="dy-options dy-options-color">
                     {colorOptions.map((opt) => {
                       const disabled = isColorBlockedByFlavor(
                         sel.flavor,
@@ -676,7 +681,8 @@ export default function DesignPage() {
                         <label
                           key={opt.id}
                           className={cx(
-                            "dy-swatch",
+                            "dy-option",
+                            "dy-option-color",
                             checked && "is-selected",
                             disabled && "is-disabled"
                           )}
@@ -702,11 +708,19 @@ export default function DesignPage() {
                             aria-label={opt.label}
                           />
                           <span
-                            className="dy-swatch-dot"
+                            className="dy-color-dot"
                             style={{ backgroundColor: opt.swatch }}
                             aria-hidden
                           />
-                          <span className="dy-swatch-label">{opt.label}</span>
+                          <span className="dy-option-text">{opt.label}</span>
+                          {opt.priceDeltaEur ? (
+                            <span className="dy-price">
+                              +{currencySymbol}{" "}
+                              {convertEurToDisplay(opt.priceDeltaEur)}
+                            </span>
+                          ) : (
+                            <span className="dy-price">Included</span>
+                          )}
                         </label>
                       )
                     })}

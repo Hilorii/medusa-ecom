@@ -1,4 +1,366 @@
-.hero{
-    background-color: transparent;
-    border: none;
+.hero-section {
+    position: relative;
+    padding: 6rem 0 5rem;
+    overflow: hidden;
+    margin-top: 20px;
+}
+
+.hero-section::before,
+.hero-section::after {
+    content: "";
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(0);
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.hero-section::before {
+    top: -18rem;
+    right: -12rem;
+    width: 28rem;
+    height: 28rem;
+    background: radial-gradient(circle at center, rgba(0, 255, 171, 0.35), rgba(0, 0, 0, 0));
+    animation: hero-glow 12s ease-in-out infinite;
+}
+
+.hero-section::after {
+    bottom: -12rem;
+    left: -10rem;
+    width: 24rem;
+    height: 24rem;
+    background: radial-gradient(circle at center, rgba(255, 64, 129, 0.2), rgba(0, 0, 0, 0));
+    animation: hero-glow 14s ease-in-out infinite reverse;
+}
+
+.hero-container {
+    display: flex;
+    align-items: center;
+    gap: 4rem;
+}
+
+.hero-text {
+    flex: 1;
+    max-width: 34rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    align-self: flex-start;
+    padding: 0.35rem 1rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.05));
+    backdrop-filter: blur(12px);
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #d3fff4;
+}
+
+.hero-title {
+    font-size: clamp(2.8rem, 4vw, 4rem);
+    line-height: 1.08;
+    font-weight: 700;
+    text-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+}
+
+.hero-subtitle {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: rgba(239, 255, 247, 0.82);
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.hero-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1.8rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: transform 0.4s ease, box-shadow 0.4s ease, background 0.4s ease,
+    color 0.4s ease;
+}
+
+.hero-btn--primary {
+    color: #0a0f0c;
+    background: linear-gradient(135deg, #6dffe0 0%, #53ffb8 45%, #2dfdff 100%);
+    box-shadow: 0 10px 30px rgba(84, 255, 212, 0.35);
+}
+
+.hero-btn--primary:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 18px 40px rgba(84, 255, 212, 0.45);
+}
+
+.hero-btn--secondary {
+    color: #e8faff;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.45), rgba(255, 255, 255, 0.08));
+    backdrop-filter: blur(14px);
+}
+
+.hero-btn--secondary:hover {
+    transform: translateY(-4px) scale(1.02);
+    border-color: rgba(255, 255, 255, 0.45);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.45));
+}
+
+.hero-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.hero-stat-card {
+    padding: 1rem 1.1rem;
+    border-radius: 1.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: linear-gradient(145deg, rgba(0, 0, 0, 0.55), rgba(255, 255, 255, 0.05));
+    backdrop-filter: blur(18px);
+    box-shadow: 0 24px 40px rgba(0, 0, 0, 0.2);
+    transition: transform 0.4s ease, border-color 0.4s ease;
+}
+
+.hero-stat-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(110, 255, 216, 0.55);
+}
+
+.hero-stat-value {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #76ffe7;
+}
+
+.hero-stat-label {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.9rem;
+    color: rgba(234, 255, 247, 0.78);
+    line-height: 1.4;
+}
+
+.hero-visual {
+    position: relative;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 18rem;
+}
+
+.hero-visual__halo {
+    position: absolute;
+    inset: auto;
+    width: clamp(18rem, 32vw, 26rem);
+    height: clamp(18rem, 32vw, 26rem);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(128, 255, 219, 0.4), rgba(0, 0, 0, 0));
+    filter: blur(60px);
+    animation: hero-pulse 8s ease-in-out infinite;
+    z-index: 0;
+}
+
+.hero-visual__frame {
+    position: relative;
+    width: clamp(18rem, 38vw, 32rem);
+    aspect-ratio: 1;
+    border-radius: 2.5rem;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: linear-gradient(145deg, rgba(0, 0, 0, 0.65), rgba(255, 255, 255, 0.08));
+    backdrop-filter: blur(14px);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+    animation: hero-float 10s ease-in-out infinite;
+    z-index: 1;
+}
+
+.hero-visual__glare {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0));
+    mix-blend-mode: screen;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.hero-visual__image {
+    object-fit: cover;
+    z-index: 1;
+}
+
+.hero-visual__card {
+    position: absolute;
+    bottom: -1.5rem;
+    right: -0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.4rem;
+    border-radius: 1.6rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.55), rgba(255, 255, 255, 0.08));
+    backdrop-filter: blur(18px);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.45);
+    animation: hero-float 9s ease-in-out infinite reverse;
+    z-index: 2;
+}
+
+.hero-visual__logo {
+    position: relative;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 25px rgba(110, 255, 216, 0.5);
+    animation: hero-spin 16s linear infinite;
+}
+
+.hero-visual__logo img {
+    object-fit: cover;
+}
+
+.hero-visual__card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.hero-visual__card-text span {
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.hero-visual__card-text p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: rgba(229, 255, 250, 0.85);
+}
+
+@keyframes hero-glow {
+    0%,
+    100% {
+        transform: scale(1) translate3d(0, 0, 0);
+    }
+    50% {
+        transform: scale(1.12) translate3d(0, 10px, 0);
+    }
+}
+
+@keyframes hero-pulse {
+    0%,
+    100% {
+        transform: scale(0.95);
+        opacity: 0.5;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+@keyframes hero-float {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0);
+    }
+    50% {
+        transform: translate3d(0, -18px, 0);
+    }
+}
+
+@keyframes hero-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    50% {
+        transform: rotate(12deg);
+    }
+    100% {
+        transform: rotate(0deg);
+    }
+}
+
+@media (max-width: 1200px) {
+    .hero-container {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .hero-text {
+        max-width: 42rem;
+        align-items: center;
+    }
+
+    .hero-badge {
+        align-self: center;
+    }
+
+    .hero-stats {
+        justify-items: center;
+    }
+
+    .hero-visual__card {
+        position: relative;
+        bottom: auto;
+        right: auto;
+        margin-top: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero-section {
+        padding: 4.5rem 0 3.5rem;
+    }
+
+    .hero-title {
+        font-size: clamp(2.4rem, 9vw, 3.2rem);
+    }
+
+    .hero-subtitle {
+        font-size: 0.95rem;
+    }
+
+    .hero-visual__frame {
+        border-radius: 1.8rem;
+    }
+
+    .hero-visual__card {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+@media (max-width: 540px) {
+    .hero-actions {
+        flex-direction: column;
+    }
+
+    .hero-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-visual__frame {
+        width: 100%;
+    }
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import "./about.css"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 export const metadata: Metadata = {
   title: "GlitchGlow – About Us",
@@ -54,20 +55,20 @@ export default function AboutPage() {
 
           {/* CTA */}
           <div className="mt-10 flex flex-wrap items-center gap-3">
-            <a
+            <LocalizedClientLink
               href="/design"
               className="about-btn-primary"
               aria-label="Start your sign"
             >
               Start your sign
-            </a>
-            <a
+            </LocalizedClientLink>
+            <LocalizedClientLink
               href="/gallery"
               className="about-btn-ghost"
               aria-label="View gallery"
             >
               View gallery
-            </a>
+            </LocalizedClientLink>
           </div>
         </div>
 

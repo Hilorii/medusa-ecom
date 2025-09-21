@@ -119,7 +119,9 @@ export function previewPrice(body: {
   return jfetch<{
     currency: "EUR" | "USD" | "GBP" | "PLN"
     unit_price: number
+    unit_price_minor?: number
     subtotal: number
+    subtotal_minor?: number
     qty: number
     fx_rate: number
     breakdown: {

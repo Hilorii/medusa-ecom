@@ -35,8 +35,10 @@ export type GGPricingTable = {
 
 export type GGPriceResult = {
   currency: GGCurrency;
-  unit_price: number; // in minor units (cents)
-  subtotal: number; // unit_price * qty (cents)
+  unit_price: number; // major units (rounded to currency precision)
+  unit_price_minor: number; // helper in minor units (integer)
+  subtotal: number; // unit_price * qty (major units)
+  subtotal_minor: number; // helper in minor units
   qty: number;
   fx_rate: number; // EUR -> currency multiplier used for this calculation
   breakdown: {

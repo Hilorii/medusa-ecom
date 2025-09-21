@@ -1,6 +1,6 @@
 // Live price preview for the configurator.
 // Input: { size, material, color, qty }
-// Output: { currency, unit_price, subtotal, qty, breakdown }
+// Output: { currency, unit_price, unit_price_minor, subtotal, subtotal_minor, qty, breakdown }
 // All comments in English as requested.
 
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
@@ -69,7 +69,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       { size, material, color, qty },
       targetCurrency,
     );
-    return res.json(price); // { currency, unit_price, subtotal, qty, breakdown }
+    return res.json(price); // includes unit/subtotal in major+minor units
   } catch (e: any) {
     return res.status(500).json({
       code: "server_error",

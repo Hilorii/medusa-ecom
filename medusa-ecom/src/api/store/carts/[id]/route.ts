@@ -5,6 +5,7 @@ import { refetchCart } from "@medusajs/medusa/api/store/carts/helpers";
 import type { StoreUpdateCartType } from "@medusajs/medusa/api/store/carts/validators";
 import type { CustomerDTO } from "@medusajs/types";
 import {
+  ggConvertEurToCurrencyAmount,
   ggConvertEurToMinorUnits,
   ggGetFxRate,
   ggNormalizeCurrency,
@@ -597,7 +598,7 @@ async function restoreCustomItemsForRegionChange({
         typeof previousCurrency === "string" &&
         previousCurrency.toUpperCase() === "EUR"
       ) {
-        totalEur = snapshot.unit_price / 100;
+        totalEur = snapshot.unit_price;
       }
     }
 
@@ -637,7 +638,17 @@ async function restoreCustomItemsForRegionChange({
     }
 
     if (totalEur !== null) {
-      update.unit_price = ggConvertEurToMinorUnits(totalEur, currency);
+      const convertedUnit = ggConvertEurToCurrencyAmount(totalEur, currency);
+      const unitMinor = ggConvertEurToMinorUnits(totalEur, currency);
+      const qtyForMinor =
+        typeof snapshot.quantity === "number" &&
+        Number.isFinite(snapshot.quantity)
+          ? snapshot.quantity
+          : 1;
+
+      update.unit_price = convertedUnit;
+      metadata.unit_price_minor = unitMinor;
+      metadata.subtotal_minor = unitMinor * qtyForMinor;
     } else if (
       typeof snapshot.unit_price === "number" &&
       Number.isFinite(snapshot.unit_price)
@@ -741,7 +752,8 @@ async function repriceCustomItemsForRegion({
       continue;
     }
 
-    const nextUnitPrice = ggConvertEurToMinorUnits(totalEur, currency);
+    const nextUnitPrice = ggConvertEurToCurrencyAmount(totalEur, currency);
+    const nextUnitMinor = ggConvertEurToMinorUnits(totalEur, currency);
     const currentCurrency =
       typeof (metadata as any).currency === "string"
         ? (metadata as any).currency.toUpperCase()
@@ -780,6 +792,11 @@ async function repriceCustomItemsForRegion({
         fx_rate: rate,
       },
     };
+
+    const metadataRecord = update.metadata as Record<string, unknown>;
+    metadataRecord.unit_price_minor = nextUnitMinor;
+    metadataRecord.subtotal_minor =
+      nextUnitMinor * (Number(item.quantity) || 1);
 
     if (typeof item.variant_id === "string") {
       update.variant_id = item.variant_id;

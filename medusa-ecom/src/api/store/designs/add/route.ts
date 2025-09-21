@@ -98,14 +98,38 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       { size, material, color, qty },
       targetCurrency,
     );
-    if (!Number.isInteger(price.unit_price)) {
-      console.warn(
-        "[gg:add] F: unit_price not integer, coercing:",
-        price.unit_price,
-      );
-      price.unit_price = Math.round(Number(price.unit_price) || 0);
-    }
+
     console.log("[gg:add] F1: price", price);
+
+    const unitPrice =
+      typeof price.unit_price === "number" && Number.isFinite(price.unit_price)
+        ? price.unit_price
+        : 0;
+
+    const metadata: Record<string, unknown> = {
+      size,
+      material,
+      color,
+      fileName,
+      fileUrl,
+      currency: price.currency,
+      fx_rate: price.fx_rate,
+      breakdown: price.breakdown,
+    };
+
+    if (
+      typeof price.unit_price_minor === "number" &&
+      Number.isFinite(price.unit_price_minor)
+    ) {
+      metadata.unit_price_minor = Math.round(price.unit_price_minor);
+    }
+
+    if (
+      typeof price.subtotal_minor === "number" &&
+      Number.isFinite(price.subtotal_minor)
+    ) {
+      metadata.subtotal_minor = Math.round(price.subtotal_minor);
+    }
 
     // G) Product + variant
     console.log("[gg:add] G: listProducts(handle)", PRODUCT_HANDLE);
@@ -187,19 +211,10 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
         thumbnail: product.thumbnail,
         variant_id: variant.id,
         quantity: qty || 1,
-        unit_price: price.unit_price, // must be integer (minor units)
+        unit_price: unitPrice,
         is_custom_price: true,
         ...(salesChannelId ? { sales_channel_id: salesChannelId } : {}),
-        metadata: {
-          size,
-          material,
-          color,
-          fileName,
-          fileUrl,
-          currency: price.currency,
-          fx_rate: price.fx_rate,
-          breakdown: price.breakdown,
-        },
+        metadata,
       } as any,
     ]);
     console.log("[gg:add] I1: line item added");

@@ -74,7 +74,7 @@ function ggClampQty(q?: number) {
   return Math.max(1, Math.min(99, Math.floor(n)))
 }
 
-// Calculate price in minor units (EUR -> cents)
+// Calculate price (major + helper minor units)
 function ggCalculatePrice(
   input: Required<Pick<Body, "size" | "material" | "color">> & { qty: number }
 ) {
@@ -82,10 +82,16 @@ function ggCalculatePrice(
   const mat = GG_SURCHARGE_MATERIAL_EUR[input.material] ?? 0
   const col = GG_SURCHARGE_COLOR_EUR[input.color] ?? 0
   const unit_eur = base + mat + col
-  const subtotal_eur = unit_eur * input.qty
+  const unit_price = Number(unit_eur.toFixed(2))
+  const multiplier = 100
+  const unit_price_minor = Math.round(unit_price * multiplier)
+  const subtotal_minor = unit_price_minor * input.qty
+  const subtotal = subtotal_minor / multiplier
   return {
-    unit_price: Math.round(unit_eur * 100), // cents
-    subtotal: Math.round(subtotal_eur * 100),
+    unit_price,
+    unit_price_minor,
+    subtotal,
+    subtotal_minor,
     qty: input.qty,
     breakdown: {
       base_eur: base,
@@ -197,14 +203,22 @@ export const POST = async (req: any, res: any) => {
         product_id: product.id,
         variant_id: variant.id,
         quantity: quantity,
-        unit_price: price.unit_price,
+        unit_price:
+          typeof price.unit_price === "number" &&
+          Number.isFinite(price.unit_price)
+            ? price.unit_price
+            : 0,
         metadata: {
           size,
           material,
           color,
           fileName,
           fileUrl,
+          currency: "EUR",
+          fx_rate: 1,
           breakdown: price.breakdown,
+          unit_price_minor: price.unit_price_minor,
+          subtotal_minor: price.subtotal_minor,
         },
       } as any,
     ])

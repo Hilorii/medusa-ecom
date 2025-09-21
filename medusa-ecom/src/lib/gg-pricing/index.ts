@@ -22,10 +22,24 @@ export function ggLoadPricing(): GGPricingTable {
   return data;
 }
 
-/** Convert euro value to minor units (cents). */
-function eurToCents(value: number): number {
-  // guard against floating point artifacts by rounding to the nearest cent
-  return Math.round(value * 100);
+/** Number of decimal places supported per currency (extend when needed). */
+const CURRENCY_PRECISION: Record<GGCurrency, number> = {
+  EUR: 2,
+  USD: 2,
+  GBP: 2,
+  PLN: 2,
+};
+
+function resolveCurrencyMultiplier(currency: GGCurrency): number {
+  const precision = CURRENCY_PRECISION[currency];
+  const decimals = typeof precision === "number" ? precision : 2;
+  return Math.pow(10, decimals);
+}
+
+/** Round a currency value to the supported precision for that currency. */
+function roundCurrency(value: number, currency: GGCurrency): number {
+  const multiplier = resolveCurrencyMultiplier(currency);
+  return Math.round(value * multiplier) / multiplier;
 }
 
 /** Default FX rates used when env overrides are not provided. */
@@ -62,16 +76,29 @@ function resolveFxRate(currency: GGCurrency): number {
 }
 
 /**
- * Convert the provided EUR amount to the target currency in minor units.
+ * * Convert the provided EUR amount to the target currency (major units).
  * The amount is assumed to be expressed in whole euros, not cents.
  */
-export function ggConvertEurToMinorUnits(
+export function ggConvertEurToCurrencyAmount(
   eurAmount: number,
   currency: GGCurrency,
 ): number {
   const normalized = Number(eurAmount) || 0;
   const rate = resolveFxRate(currency);
-  return eurToCents(normalized * rate);
+  return roundCurrency(normalized * rate, currency);
+}
+
+/**
+ * Convert EUR amount to the target currency's minor units (integer).
+ * Provided for backwards compatibility and metadata/debugging purposes.
+ */
+export function ggConvertEurToMinorUnits(
+  eurAmount: number,
+  currency: GGCurrency,
+): number {
+  const major = ggConvertEurToCurrencyAmount(eurAmount, currency);
+  const multiplier = resolveCurrencyMultiplier(currency);
+  return Math.round(major * multiplier);
 }
 
 /** Normalize incoming currency code (e.g., from regions) to GGCurrency. */
@@ -99,10 +126,11 @@ function clamp(n: number, min: number, max: number): number {
 }
 
 /**
- * Calculate price (minor units) based on user's selections.
- * - Prices are defined in EUR in the JSON table.
- * - Returns unit_price in cents (Medusa-compatible).
- * - Later: add multi-currency by table-per-currency or fx conversion.
+ * * Calculate price based on user's selections.
+ *  * - Prices are defined in EUR in the JSON table.
+ *  * - Returns unit_price in major units (e.g., PLN) rounded to currency precision.
+ *  * - Includes helper fields with the values expressed in minor units for reference.
+ *  * - Later: add multi-currency by table-per-currency or fx conversion.
  */
 export function ggCalculatePrice(
   selections: GGSelections,
@@ -140,13 +168,18 @@ export function ggCalculatePrice(
   const totalEur = base + mat + col;
   const fxRate = currency === "EUR" ? 1 : ggGetFxRate(currency);
 
-  const unit_price = ggConvertEurToMinorUnits(totalEur, currency);
-  const subtotal = unit_price * qty;
+  const unit_price = ggConvertEurToCurrencyAmount(totalEur, currency);
+  const multiplier = resolveCurrencyMultiplier(currency);
+  const unit_price_minor = Math.round(unit_price * multiplier);
+  const subtotal_minor = unit_price_minor * qty;
+  const subtotal = subtotal_minor / multiplier;
 
   return {
     currency,
     unit_price,
+    unit_price_minor,
     subtotal,
+    subtotal_minor,
     qty,
     fx_rate: fxRate,
     breakdown: {

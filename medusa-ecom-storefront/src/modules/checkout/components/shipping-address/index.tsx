@@ -28,6 +28,34 @@ const ShippingAddress = ({
   onChange: () => void
   regions: HttpTypes.StoreRegion[]
 }) => {
+  const hasAddressDetails = (
+    address?: HttpTypes.StoreCartAddress | null
+  ): boolean => {
+    if (!address) {
+      return false
+    }
+
+    const relevantFields: Array<keyof HttpTypes.StoreCartAddress> = [
+      "first_name",
+      "last_name",
+      "address_1",
+      "company",
+      "postal_code",
+      "city",
+      "province",
+      "phone",
+    ]
+
+    return relevantFields.some((key) => {
+      const value = address[key]
+
+      if (typeof value === "string") {
+        return value.trim().length > 0
+      }
+
+      return value !== null && value !== undefined
+    })
+  }
   const [formData, setFormData] = useState<Record<string, any>>({
     "shipping_address.first_name": cart?.shipping_address?.first_name || "",
     "shipping_address.last_name": cart?.shipping_address?.last_name || "",
@@ -117,9 +145,11 @@ const ShippingAddress = ({
       return cartShippingAddress !== prevShippingAddress
     })()
 
-    if (shippingAddressChanged) {
+    if (shippingAddressChanged && hasAddressDetails(cartShippingAddress)) {
       setFormAddress(cartShippingAddress ?? undefined, cart.email)
-    } else if (cart.email && cart.email !== previousCartEmail.current) {
+    }
+
+    if (cart.email && cart.email !== previousCartEmail.current) {
       setFormData((prevState: Record<string, any>) => ({
         ...prevState,
         email: cart.email ?? "",

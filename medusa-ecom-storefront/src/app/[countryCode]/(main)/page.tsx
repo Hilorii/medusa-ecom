@@ -1,6 +1,6 @@
 import { Metadata } from "next"
 
-import FeaturedProducts from "@modules/home/components/featured-products"
+// import FeaturedProducts from "@modules/home/components/featured-products"
 import GlobalPromise from "@modules/home/components/global-promise"
 import Hero from "@modules/home/components/hero"
 import InteractiveShowcase from "@modules/home/components/interactive-showcase"
@@ -8,6 +8,7 @@ import SustainabilitySpotlight from "@modules/home/components/sustainability"
 import Testimonials from "@modules/home/components/testimonials"
 import { listCollections } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
+import Feedback from "@modules/home/components/feedback"
 
 export const metadata: Metadata = {
   title: "GlitchGlow",
@@ -39,9 +40,10 @@ export default async function Home(props: {
       <SustainabilitySpotlight />
       <GlobalPromise />
       <Testimonials />
+      <Feedback />
       <div className="py-12">
         <ul className="flex flex-col gap-x-6">
-          <FeaturedProducts collections={collections} region={region} />
+          {/*<FeaturedProducts collections={collections} region={region} />*/}
         </ul>
       </div>
     </>

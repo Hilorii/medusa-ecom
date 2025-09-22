@@ -1,0 +1,337 @@
+.feedback-section {
+    position: relative;
+    padding: 6rem 0 5rem;
+    overflow: hidden;
+}
+
+/* Removed page-level background blobs. Keep visuals inside the card only. */
+
+.feedback-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+}
+
+.feedback-card {
+    position: relative;
+    width: min(100%, 720px);
+    padding: clamp(2.75rem, 5vw, 3.5rem);
+    border-radius: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: linear-gradient(145deg, rgba(4, 7, 9, 0.9), rgba(23, 41, 36, 0.8));
+    box-shadow: 0 32px 60px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(24px);
+    color: #f4fffb;
+    z-index: 1;
+    transition: transform 0.6s ease, box-shadow 0.6s ease;
+}
+
+.feedback-card::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    border: 1px solid rgba(93, 255, 210, 0.18);
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.feedback-card[data-state="success"] {
+    transform: translateY(-6px);
+    box-shadow: 0 28px 80px rgba(84, 255, 212, 0.35);
+}
+
+.feedback-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    text-align: left;
+}
+
+/* Reserve space for title/caption so header height does NOT change on hover */
+.feedback-title[data-stable] {
+    font-size: clamp(2.1rem, 4vw, 2.9rem);
+    line-height: 1.15;
+    font-weight: 700;
+    color: #f9fffb;
+    min-height: 2.5em; /* ~2 lines */
+}
+
+.feedback-caption[data-stable] {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: rgba(229, 255, 244, 0.78);
+    max-width: 34ch;
+    min-height: 3.4em; /* ~2 lines */
+}
+
+.feedback-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    align-self: flex-start;
+    padding: 0.3rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.25));
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #cafff5;
+}
+
+.feedback-rating-panel {
+    margin-top: 2.5rem;
+    padding: 1.8rem;
+    border-radius: 1.6rem;
+    background: linear-gradient(135deg, rgba(10, 38, 31, 0.65), rgba(16, 32, 41, 0.45));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(22, 49, 40, 0.45);
+    /* Prevent inner relayouts from nudging siblings */
+    contain: layout style;
+}
+
+.feedback-rating-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.1rem;
+}
+
+.feedback-rating-label {
+    font-size: 0.95rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(194, 250, 234, 0.9);
+    /* Avoid width jitter between "Choose rating" and "5/5" */
+    min-width: 9ch;
+}
+
+.feedback-progress {
+    position: relative;
+    flex: 1;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(50, 80, 72, 0.6);
+    overflow: hidden;
+}
+
+.feedback-progress__fill {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #38ffc3 0%, #2dfdff 100%);
+    transform-origin: left;
+    transition: width 0.25s ease; /* snappier to feel responsive but smooth */
+}
+
+.feedback-stars {
+    display: flex;
+    gap: 0.9rem;
+    /* Keep the row height constant while hovering */
+    min-height: 3.2rem;
+    align-items: center;
+}
+
+.feedback-star {
+    position: relative;
+    width: 3.2rem;
+    height: 3.2rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: linear-gradient(150deg, rgba(6, 13, 17, 0.7), rgba(10, 29, 24, 0.4));
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    will-change: transform;
+}
+
+.feedback-star::after {
+    content: "";
+    position: absolute;
+    inset: -30%;
+    background: conic-gradient(from 180deg, rgba(84, 255, 212, 0.2), transparent);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.feedback-star .feedback-star__icon {
+    width: 1.6rem;
+    height: 1.6rem;
+    fill: rgba(180, 214, 206, 0.35);
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45));
+    transition: fill 0.2s ease;
+}
+
+.feedback-star .feedback-star__glow {
+    position: absolute;
+    width: 140%;
+    height: 140%;
+    background: radial-gradient(circle at center, rgba(84, 255, 212, 0.55), rgba(84, 255, 212, 0));
+    opacity: 0;
+    transform: scale(0.75);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    filter: blur(12px);
+}
+
+.feedback-star:hover,
+.feedback-star:focus-visible {
+    transform: translateY(-3px) scale(1.04);
+    border-color: rgba(84, 255, 212, 0.45);
+    box-shadow: 0 16px 36px rgba(14, 30, 26, 0.45);
+}
+
+.feedback-star:hover .feedback-star__icon,
+.feedback-star:focus-visible .feedback-star__icon {
+    fill: rgba(136, 255, 230, 0.9);
+}
+
+.feedback-star.is-active .feedback-star__icon {
+    fill: #6dffe0;
+}
+
+.feedback-star.is-active .feedback-star__glow {
+    opacity: 0.45;
+    transform: scale(1);
+}
+
+.feedback-star.is-selected::after {
+    opacity: 1;
+}
+
+.feedback-form {
+    margin-top: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+}
+
+.feedback-label {
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(193, 248, 231, 0.95);
+}
+
+.feedback-textarea-wrapper {
+    position: relative;
+}
+
+.feedback-textarea {
+    width: 100%;
+    min-height: 150px;
+    max-height: 600px;
+    resize: vertical;
+    padding: 1.2rem 1.3rem 2.6rem 1.3rem;
+    border-radius: 1.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(135deg, rgba(4, 13, 16, 0.75), rgba(8, 22, 27, 0.9));
+    color: #f8fffb;
+    font-size: 1rem;
+    line-height: 1.7;
+    box-shadow: inset 0 20px 60px rgba(0, 0, 0, 0.35);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feedback-textarea:focus {
+    outline: none;
+    border-color: rgba(84, 255, 212, 0.6);
+    box-shadow: 0 0 0 1px rgba(84, 255, 212, 0.35), inset 0 20px 70px rgba(5, 28, 24, 0.55);
+}
+
+.feedback-textarea::placeholder {
+    color: rgba(207, 245, 232, 0.5);
+}
+
+.feedback-character-count {
+    position: absolute;
+    bottom: 0.75rem;
+    right: 1rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(176, 231, 217, 0.7);
+}
+
+.feedback-submit {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0.95rem 2.4rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: linear-gradient(135deg, #54ffd4 0%, #2dfdff 50%, #53ffb8 100%);
+    color: #06221a;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.25s ease, box-shadow 0.35s ease, filter 0.35s ease;
+    overflow: hidden;
+}
+
+.feedback-submit:disabled {
+    cursor: progress;
+    filter: grayscale(0.1);
+    opacity: 0.85;
+}
+
+.feedback-submit:hover:not(:disabled) {
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: 0 22px 50px rgba(84, 255, 212, 0.45);
+}
+
+.feedback-submit__glow {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.5), transparent 55%);
+    mix-blend-mode: screen;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+}
+
+.feedback-submit:hover .feedback-submit__glow,
+.feedback-submit:focus-visible .feedback-submit__glow {
+    opacity: 1;
+}
+
+.feedback-submit[data-variant="success"] {
+    background: linear-gradient(135deg, #9bf97b 0%, #4dffbd 100%);
+    color: #063316;
+}
+
+.feedback-status {
+    margin-top: 1.1rem;
+    min-height: 1.4rem;
+    font-size: 0.9rem;
+    color: rgba(192, 255, 230, 0.85);
+}
+
+@media (max-width: 768px) {
+    .feedback-card {
+        padding: 2.25rem;
+        border-radius: 1.6rem;
+    }
+
+    .feedback-rating-panel {
+        margin-top: 2rem;
+        padding: 1.4rem;
+    }
+
+    .feedback-stars {
+        gap: 0.6rem;
+        min-height: 2.8rem;
+    }
+
+    .feedback-star {
+        width: 2.8rem;
+        height: 2.8rem;
+        border-radius: 0.9rem;
+    }
+}

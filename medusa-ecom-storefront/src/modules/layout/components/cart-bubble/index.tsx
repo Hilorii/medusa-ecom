@@ -23,7 +23,7 @@ const CartBubble = () => {
   const router = useRouter()
 
   // Persisted snap position ("top-left" | ...).
-  const [position, setPosition] = useState<PositionKey>("bottom-right")
+  const [position, setPosition] = useState<PositionKey>("middle-right")
 
   // Drag state with absolute pixel coords while dragging.
   const [dragging, setDragging] = useState(false)

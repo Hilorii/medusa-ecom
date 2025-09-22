@@ -12,6 +12,11 @@ const Help = () => {
             <LocalizedClientLink href="/contact">Contact</LocalizedClientLink>
           </li>
           <li>
+            <LocalizedClientLink href="/#feedback">
+              Feedback
+            </LocalizedClientLink>
+          </li>
+          <li>
             <LocalizedClientLink href="/shipping-returns">
               Shipping & Returns
             </LocalizedClientLink>

@@ -65,15 +65,16 @@ export default async function OrderCompletedTemplate({
           </div>
 
           {/* Shipping + payment column; collapsible on small screens via <details> */}
+          {/* add "open" (gg-details" open) if you want shipping and payment details opened by default*/}
           <div className="gg-col">
-            <details className="gg-glass gg-panel gg-details" open>
+            <details className="gg-glass gg-panel gg-details">
               <summary className="gg-summary">Shipping Details</summary>
               <div className="gg-details-content">
                 <ShippingDetails order={order} />
               </div>
             </details>
 
-            <details className="gg-glass gg-panel gg-details" open>
+            <details className="gg-glass gg-panel gg-details">
               <summary className="gg-summary">Payment Details</summary>
               <div className="gg-details-content">
                 <PaymentDetails order={order} />

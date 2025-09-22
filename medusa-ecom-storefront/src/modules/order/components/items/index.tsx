@@ -81,11 +81,11 @@ const Items = ({ order }: ItemsProps) => {
                           Variant: {item.variant_title}
                         </p>
                       )}
-                      {item?.variant_title && (
-                        <p className="gg-item-variant">
-                          Variant: {item.variant_title}
-                        </p>
-                      )}
+                      {/*{item?.variant_title && (*/}
+                      {/*  <p className="gg-item-variant">*/}
+                      {/*    Variant: {item.variant_title}*/}
+                      {/*  </p>*/}
+                      {/*)}*/}
                     </div>
 
                     <div className="gg-item-meta">

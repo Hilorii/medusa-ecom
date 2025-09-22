@@ -1,31 +1,29 @@
 import React from "react"
-
 import { IconProps } from "types/icon"
 
 const Blik: React.FC<IconProps> = ({ size = 24, ...attributes }) => {
   return (
     <svg
+      xmlns="http://www.w3.org/2000/svg"
       width={size}
       height={size}
-      viewBox="0 0 24 24"
-      role="img"
-      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 512 512"
       {...attributes}
     >
-      <title>BLIK icon</title>
-      <rect width="24" height="24" rx="4" fill="#111" />
+      <rect width="512" height="512" rx="100" fill="#000" />
       <text
-        x="12"
-        y="15"
+        x="50%"
+        y="55%"
         textAnchor="middle"
-        fontSize="10"
-        fontWeight="700"
-        fill="white"
-        fontFamily="Inter, sans-serif"
+        fontSize="280"
+        fontFamily="Arial, Helvetica, sans-serif"
+        fontWeight="bold"
+        fill="#fff"
+        dy=".3em"
       >
-        BLIK
+        blik
       </text>
-      <circle cx="18" cy="6" r="2" fill="#ff3366" />
+      <circle cx="430" cy="90" r="40" fill="#e6007e" />
     </svg>
   )
 }

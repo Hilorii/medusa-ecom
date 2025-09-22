@@ -349,7 +349,7 @@ export default function DesignPage() {
   }
 
   // Artwork handling
-  const ACCEPT = ".png,.jpg,.jpeg,.webp"
+  const ACCEPT = ".png,.jpg,.jpeg,.webp,.svg"
   const MAX_MB = 6
   function onPickExample(name: "example1.png" | "example2.png") {
     setArtError(null)
@@ -366,7 +366,7 @@ export default function DesignPage() {
       file.name.toLowerCase().endsWith(ext.trim())
     )
     if (!okExt) {
-      setArtError("Allowed formats: .png, .jpg, .jpeg, .webp")
+      setArtError("Allowed formats: .png, .jpg, .jpeg, .webp, .svg")
       return
     }
     const maxBytes = MAX_MB * 1024 * 1024
@@ -541,13 +541,13 @@ export default function DesignPage() {
                       <div className="dy-upload-inner">
                         <div className="dy-upload-title">Upload a file</div>
                         <p className="dy-subtle">
-                          Accepted: PNG, JPG, WEBP (max 6MB)
+                          Accepted: PNG, JPG, WEBP, SVG (max 6MB)
                         </p>
 
                         <label className="dy-upload-btn">
                           <input
                             type="file"
-                            accept=".png,.jpg,.jpeg,.webp"
+                            accept=".png,.jpg,.jpeg,.webp,.svg"
                             onChange={(e) => onUploadFile(e.target.files?.[0])}
                           />
                           <span>Choose file</span>

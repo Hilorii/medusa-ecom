@@ -13,7 +13,7 @@ import crypto from "crypto";
 
 // ---------- Types ----------
 type GGUploadBody = {
-  file_base64: string; // "data:image/png;base64,AAAA..."
+  file_base64: string; // "data:image/png;base64,AAAA..." etc.
   originalName?: string; // optional client file name
   cartId?: string; // optional for prefixing
 };
@@ -29,7 +29,12 @@ const GG_ALLOWED_ORIGINS = new Set<string>([
 // Otherwise we save ONLY to Desktop/Pulpit. No OneDrive fallbacks.
 const GG_ENV_DIR = process.env.GG_UPLOADS_DIR;
 
-const GG_ALLOWED_MIME = new Set(["image/png", "image/jpeg", "image/webp"]);
+const GG_ALLOWED_MIME = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/svg+xml",
+]);
 const GG_MAX_BYTES = (Number(process.env.GG_UPLOAD_MAX_MB) || 6) * 1024 * 1024;
 
 // ---------- Small CORS helper ----------
@@ -64,6 +69,8 @@ function ggExtFromMime(mime: string): string {
       return ".jpg";
     case "image/webp":
       return ".webp";
+    case "image/svg+xml":
+      return ".svg";
     default:
       return "";
   }

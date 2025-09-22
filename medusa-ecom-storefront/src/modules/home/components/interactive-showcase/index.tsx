@@ -25,7 +25,7 @@ const InteractiveShowcase = () => {
       title: "Glow with AI or upload art",
       description:
         "Start from your own artwork or let our AI assistant sketch concepts in seconds.",
-      detail: "Supports PNG, SVG, JPG and on-canvas generation",
+      detail: "Supports PNG, SVG, JPG, WEBP and on-canvas generation",
     },
     {
       title: "Control every vibe",

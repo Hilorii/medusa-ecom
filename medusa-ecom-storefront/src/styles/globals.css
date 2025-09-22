@@ -128,3 +128,13 @@ body {
     background-size: cover;
   }
 }
+body.gg-body--checkout {
+  background: #fff;
+  color: #1f2937;
+}
+
+@media (max-width: 768px) {
+  body.gg-body--checkout {
+    background: #fff;
+  }
+}

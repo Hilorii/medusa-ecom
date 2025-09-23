@@ -4,7 +4,7 @@ import path from "node:path";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { MedusaError, Modules } from "@medusajs/framework/utils";
 
-import { ggSanitizeLineItemId } from "../../../../lib/gg-incoming";
+import { ggSanitizeLineItemId } from "../../../../../lib/gg-incoming";
 
 const STATIC_ROOT = path.resolve(process.cwd(), "static");
 const INCOMING_DIR = path.join(STATIC_ROOT, "incoming");

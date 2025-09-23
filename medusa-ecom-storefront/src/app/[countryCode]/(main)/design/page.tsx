@@ -11,7 +11,7 @@ import {
   setCartCookie,
 } from "@lib/client/gg-store"
 
-// NEW: bottom-sheet component
+// Bottom-sheet component
 import DesignGenerateComponent from "./design-generate-component"
 
 /**
@@ -22,11 +22,11 @@ import DesignGenerateComponent from "./design-generate-component"
  * - POST /store/designs/add
  * - POST /api/gg/cart/set (cookies persist)
  *
- * Key change in this version:
+ * Key points:
  * - Colors are disabled based on the selected material (flavor).
  * - Materials are never disabled.
  * - On material pick, color is reset to force a valid combo.
- * - Disabled colors show a tooltip: "Cant use that color with that material".
+ * - Disabled colors show a tooltip.
  */
 
 // ---------------- Types ----------------
@@ -89,14 +89,8 @@ function symbolForCurrency(code: CurrencyCode): string {
 }
 
 // ---------------- Incompatibility map ----------------
-/**
- * Define incompatible color sets per material (flavor).
- * Extend this map as needed.
- */
 const INCOMPATIBLE: Record<string, string[]> = {
   galaxy: ["white"],
-  // example:
-  // "shadow": ["green", "red"]
 }
 
 // ---------------- Utils ----------------
@@ -123,7 +117,7 @@ function extractCartId(resp: any): string | undefined {
 export default function DesignPage() {
   const router = useRouter()
 
-  // NEW: modal open state
+  // Modal open state
   const [genOpen, setGenOpen] = useState(false)
 
   // Config from backend
@@ -267,6 +261,9 @@ export default function DesignPage() {
   const size = sel.size ? sizes[sel.size] : undefined
   const flavor = sel.flavor ? flavors[sel.flavor] : undefined
   const color = sel.color ? colors[sel.color] : undefined
+  const art = sel.art
+  const isExampleArt = art?.source === "example"
+  const isUploadArt = art?.source === "upload"
 
   // Live price from backend (only when we have all required selections)
   const [livePrice, setLivePrice] = useState<number>(0)
@@ -366,7 +363,7 @@ export default function DesignPage() {
       file.name.toLowerCase().endsWith(ext.trim())
     )
     if (!okExt) {
-      setArtError("Allowed formats: .png, .jpg, .jpeg, .webp, .svg")
+      setArtError("Accepted formats: .png, .jpg, .jpeg, .webp, .svg")
       return
     }
     const maxBytes = MAX_MB * 1024 * 1024
@@ -388,23 +385,33 @@ export default function DesignPage() {
 
   // Add to cart flow
   const [adding, setAdding] = useState(false)
+  const canSubmitDesign = Boolean(
+    size && flavor && color && art && !isExampleArt
+  )
+  const disableAddButton = adding || !canSubmitDesign
+
   async function addToCart() {
-    if (!size || !flavor || !color || !sel.art) return
+    // Strong runtime/type guard so TS knows these are defined below
+    if (!size || !flavor || !color || !art) return
+    if (isExampleArt) return
+
     setAdding(true)
     try {
       // 1) Upload artwork if needed
       let fileUrl: string | undefined
       let fileName: string | undefined
-      if (sel.art.source === "upload") {
+      if (art.source === "upload") {
         const up = await uploadArtwork({
-          file_base64: sel.art.dataUrl,
-          originalName: sel.art.name,
+          file_base64: art.dataUrl,
+          originalName: art.name,
         })
         fileUrl = up.fileUrl
         fileName = up.fileName
       } else {
-        fileUrl = sel.art.dataUrl // example asset
-        fileName = sel.art.name
+        // @ts-ignore
+        fileUrl = art.dataUrl // example asset
+        // @ts-ignore
+        fileName = art.name
       }
 
       // 2) Add to cart in Medusa
@@ -418,7 +425,7 @@ export default function DesignPage() {
         cartId: cartId || undefined,
       })
 
-      // 3) Persist cart cookie and refresh UI
+      // 3) Persist cart cookie and navigate
       const nextCartId = extractCartId(cartResp)
       if (nextCartId) {
         setCartId(nextCartId)
@@ -548,25 +555,25 @@ export default function DesignPage() {
                           <input
                             type="file"
                             accept=".png,.jpg,.jpeg,.webp,.svg"
-                            onChange={(e) => onUploadFile(e.target.files?.[0])}
+                            onChange={(e) =>
+                              onUploadFile(e.target.files?.[0] || null)
+                            }
                           />
                           <span>Choose file</span>
                         </label>
 
                         {artError && <p className="dy-error">{artError}</p>}
 
-                        {sel.art?.dataUrl && sel.art.source === "upload" && (
+                        {/* Safe checks to satisfy TS */}
+                        {isUploadArt && art?.dataUrl && (
                           <div className="dy-upload-preview">
                             <img
-                              src={sel.art.dataUrl}
-                              alt={sel.art.name}
+                              src={art.dataUrl}
+                              alt={art.name}
                               loading="lazy"
                             />
-                            <div
-                              className="dy-upload-name"
-                              title={sel.art.name}
-                            >
-                              {sel.art.name}
+                            <div className="dy-upload-name" title={art.name}>
+                              {art.name}
                             </div>
                           </div>
                         )}
@@ -580,8 +587,7 @@ export default function DesignPage() {
                         {(["example1.png", "example2.png"] as const).map(
                           (name) => {
                             const selected =
-                              sel.art?.source === "example" &&
-                              sel.art.name === name
+                              art?.source === "example" && art?.name === name
                             return (
                               <button
                                 type="button"
@@ -611,7 +617,6 @@ export default function DesignPage() {
                       Prototype only — not implemented yet.
                     </p>
 
-                    {/* CHANGED: open the bottom-sheet instead of alert */}
                     <button
                       type="button"
                       className="dy-btn dy-btn-generate"
@@ -689,12 +694,12 @@ export default function DesignPage() {
                           aria-disabled={disabled}
                           title={
                             disabled
-                              ? "Cant use that color with that material"
+                              ? "Can't use that color with that material"
                               : undefined
                           }
                           data-tooltip={
                             disabled
-                              ? "Cant use that color with that material"
+                              ? "Can't use that color with that material"
                               : undefined
                           }
                         >
@@ -739,10 +744,10 @@ export default function DesignPage() {
                     <div>
                       <dt>Artwork</dt>
                       <dd>
-                        {sel.art
-                          ? sel.art.source === "upload"
-                            ? `File: ${sel.art.name}`
-                            : `Example: ${sel.art.name}`
+                        {art
+                          ? art.source === "upload"
+                            ? `File: ${art.name}`
+                            : `Example: ${art.name}`
                           : "-"}
                       </dd>
                     </div>
@@ -766,6 +771,13 @@ export default function DesignPage() {
                     </div>
                   </dl>
 
+                  {isExampleArt && (
+                    <p className="dy-note" role="status">
+                      Sample images are for inspiration only. Please upload your
+                      own artwork to complete your design.
+                    </p>
+                  )}
+
                   <div className="dy-actions">
                     <button
                       className="dy-btn dy-btn-secondary"
@@ -776,9 +788,7 @@ export default function DesignPage() {
                     <button
                       className="dy-btn"
                       onClick={addToCart}
-                      disabled={
-                        adding || !size || !sel.art || !flavor || !color
-                      }
+                      disabled={disableAddButton}
                     >
                       {adding ? "Adding..." : "Add to cart"}
                     </button>
@@ -816,10 +826,10 @@ export default function DesignPage() {
                 <div className="dy-preview-title">Live preview</div>
 
                 <div className="dy-preview-slab">
-                  {sel.art?.dataUrl && (
+                  {art?.dataUrl && (
                     <img
                       className="dy-preview-art"
-                      src={sel.art.dataUrl}
+                      src={art.dataUrl}
                       alt="Artwork preview"
                       loading="lazy"
                     />
@@ -831,10 +841,10 @@ export default function DesignPage() {
                 <ul className="dy-preview-meta">
                   <li>{size?.label || "Choose a size"}</li>
                   <li>
-                    {sel.art
-                      ? sel.art.source === "upload"
-                        ? sel.art.name
-                        : sel.art.name
+                    {art
+                      ? art.source === "upload"
+                        ? art.name
+                        : art.name
                       : "Add artwork (step: Artwork)"}
                   </li>
                   <li>{flavor?.label || "Choose a finish"}</li>
@@ -846,7 +856,7 @@ export default function DesignPage() {
         </section>
       </div>
 
-      {/* NEW: bottom sheet portal */}
+      {/* Bottom sheet portal */}
       <DesignGenerateComponent
         open={genOpen}
         onClose={() => setGenOpen(false)}

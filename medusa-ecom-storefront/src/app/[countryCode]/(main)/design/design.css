@@ -212,6 +212,17 @@
 .dy-upload-name{ font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 .dy-error{ color:#ff7a7a; font-weight:600; }
+.dy-note{
+    margin-top:12px;
+    padding:12px 14px;
+    border-radius:14px;
+    border:1px solid var(--dy-card-bd);
+    background:linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+    color:var(--dy-text);
+    font-weight:600;
+    line-height:1.45;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+}
 
 /* Examples */
 .dy-examples{

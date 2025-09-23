@@ -443,17 +443,15 @@ const ArtworkGroup = ({
 
   return (
     <div className={joinClassNames("flex min-w-0 flex-col gap-y-2", className)}>
-      <div className="flex items-center justify-between gap-x-2">
-        <div className="flex items-center gap-x-2">
-          <Text size="small" weight="plus">
-            {label}
-          </Text>
-          {hasImages && (
-            <Badge size="2xsmall" color="grey">
-              {images.length}
-            </Badge>
-          )}
-        </div>
+      <div className="flex items-center gap-x-2">
+        <Text size="small" weight="plus">
+          {label}
+        </Text>
+        {hasImages && (
+          <Badge size="2xsmall" color="grey">
+            {images.length}
+          </Badge>
+        )}
         {onDownload && (
           <IconButton
             size="2xsmall"

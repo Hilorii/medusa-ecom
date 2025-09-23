@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { defineWidgetConfig } from "@medusajs/admin-sdk";
 import type { FetchArgs } from "@medusajs/js-sdk";
 import type { AdminOrder, DetailWidgetProps } from "@medusajs/types";
-import { Badge, Container, Heading, Text } from "@medusajs/ui";
-import { Spinner } from "@medusajs/icons";
+import { Badge, Container, Heading, IconButton, Text } from "@medusajs/ui";
+import { ArrowDownTray, Spinner } from "@medusajs/icons";
 
 type ArtworkEntry = {
   line_item_id: string | null;
@@ -199,6 +199,133 @@ const shortenId = (value?: string | null, max = 12) => {
   return `${trimmed.slice(0, edge)}…${trimmed.slice(-edge)}`;
 };
 
+const joinClassNames = (...values: Array<string | false | null | undefined>) =>
+  values.filter(Boolean).join(" ");
+
+const sanitizeFileName = (value: string) =>
+  value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9\-_.]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "")
+    .toLowerCase();
+
+const getFileExtension = (value: string | null | undefined) => {
+  if (!value) {
+    return "";
+  }
+
+  const sanitized = value.split("?")[0]?.split("#")[0] ?? "";
+  const lastDot = sanitized.lastIndexOf(".");
+
+  if (lastDot <= 0 || lastDot === sanitized.length - 1) {
+    return "";
+  }
+
+  return sanitized.slice(lastDot).toLowerCase();
+};
+
+const getFileNameFromUrl = (value: string): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const url = new URL(value, "http://localhost");
+    const segment = url.pathname.split("/").filter(Boolean).pop();
+    if (!segment) {
+      return null;
+    }
+
+    return decodeURIComponent(segment);
+  } catch {
+    const sanitized = value.split("?")[0]?.split("#")[0] ?? "";
+    const segment = sanitized.split("/").filter(Boolean).pop();
+    return segment ? decodeURIComponent(segment) : null;
+  }
+};
+
+const ensureAbsoluteUrl = (href: string, w: Window) => {
+  try {
+    return new URL(href, w.location?.href ?? "").toString();
+  } catch {
+    return href;
+  }
+};
+
+type DownloadResult = {
+  success: number;
+  failed: number;
+};
+
+const downloadImageFiles = async (
+  sources: string[],
+  baseFileName: string,
+): Promise<DownloadResult> => {
+  const w = getWindow();
+  if (!w?.document?.body) {
+    throw new Error("Downloads are only available in a browser context");
+  }
+
+  const sanitizedBase = sanitizeFileName(baseFileName) || "artwork";
+  let success = 0;
+  let failed = 0;
+
+  for (let index = 0; index < sources.length; index += 1) {
+    const src = sources[index];
+    if (!src) {
+      failed += 1;
+      continue;
+    }
+
+    try {
+      const link = w.document.createElement("a");
+      link.href = ensureAbsoluteUrl(src, w);
+      const originalName = getFileNameFromUrl(src);
+      const originalExtension = getFileExtension(originalName);
+      const sourceExtension = originalExtension || getFileExtension(src);
+      const fallbackName = `${sanitizedBase}-${String(index + 1).padStart(2, "0")}${
+        sourceExtension || ""
+      }`;
+      const sanitizedOriginal =
+        originalName?.trim() && sanitizeFileName(originalName);
+      link.download = sanitizedOriginal || fallbackName;
+      link.rel = "noopener";
+      link.target = "_self";
+      link.style.display = "none";
+      w.document.body.appendChild(link);
+      link.click();
+      w.document.body.removeChild(link);
+      success += 1;
+
+      if (index < sources.length - 1) {
+        await new Promise<void>((resolve) => {
+          w.setTimeout(resolve, 150);
+        });
+      }
+    } catch (error) {
+      failed += 1;
+      if (w.console) {
+        w.console.warn("Failed to trigger artwork download", src, error);
+      }
+    }
+  }
+
+  if (success === 0) {
+    throw new Error("No files could be downloaded");
+  }
+
+  return { success, failed };
+};
+
+const showDownloadAlert = (message: string) => {
+  const w = getWindow();
+  if (w?.alert) {
+    w.alert(message);
+  }
+};
+
 const normalizeImages = (images: unknown) => {
   if (!Array.isArray(images)) {
     return [];
@@ -299,42 +426,75 @@ type ArtworkGroupProps = {
   label: string;
   images: string[];
   emptyLabel: string;
+  onDownload?: () => void;
+  downloading?: boolean;
+  className?: string;
 };
 
-const ArtworkGroup = ({ label, images, emptyLabel }: ArtworkGroupProps) => {
+const ArtworkGroup = ({
+  label,
+  images,
+  emptyLabel,
+  onDownload,
+  downloading,
+  className,
+}: ArtworkGroupProps) => {
   const hasImages = images.length > 0;
 
   return (
-    <div className="flex flex-col gap-y-2">
-      <div className="flex items-center gap-x-2">
-        <Text size="small" weight="plus">
-          {label}
-        </Text>
-        {hasImages && (
-          <Badge size="2xsmall" color="grey">
-            {images.length}
-          </Badge>
+    <div className={joinClassNames("flex min-w-0 flex-col gap-y-2", className)}>
+      <div className="flex items-center justify-between gap-x-2">
+        <div className="flex items-center gap-x-2">
+          <Text size="small" weight="plus">
+            {label}
+          </Text>
+          {hasImages && (
+            <Badge size="2xsmall" color="grey">
+              {images.length}
+            </Badge>
+          )}
+        </div>
+        {onDownload && (
+          <IconButton
+            size="2xsmall"
+            variant="transparent"
+            className="shrink-0"
+            onClick={onDownload}
+            isLoading={!!downloading}
+            disabled={!hasImages || !!downloading}
+            type="button"
+            aria-label={`Download ${label} artwork`}
+          >
+            <ArrowDownTray className="h-3 w-3" />
+          </IconButton>
         )}
       </div>
 
       {hasImages ? (
         <div className="flex flex-wrap gap-2">
-          {images.map((src, index) => (
-            <a
-              key={`${src}-${index}`}
-              href={src}
-              target="_blank"
-              rel="noreferrer"
-              className="group relative block h-20 w-20 overflow-hidden rounded-md border border-ui-border-base bg-ui-bg-subtle"
-              title={src}
-            >
-              <img
-                src={src}
-                alt={`${label} artwork ${index + 1}`}
-                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-              />
-            </a>
-          ))}
+          {images.map((src, index) => {
+            const derivedName = getFileNameFromUrl(src);
+
+            return (
+              <a
+                key={`${src}-${index}`}
+                href={src}
+                target="_blank"
+                rel="noreferrer"
+                download={
+                  derivedName ? sanitizeFileName(derivedName) : undefined
+                }
+                className="group relative block h-20 w-20 overflow-hidden rounded-md border border-ui-border-base bg-ui-bg-subtle"
+                title={src}
+              >
+                <img
+                  src={src}
+                  alt={`${label} artwork ${index + 1}`}
+                  className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                />
+              </a>
+            );
+          })}
         </div>
       ) : (
         <Text size="small" className="text-ui-fg-subtle">
@@ -348,6 +508,7 @@ const ArtworkGroup = ({ label, images, emptyLabel }: ArtworkGroupProps) => {
 const OrderArtworkWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
   const orderId = data?.id;
   const { loading, error, items } = useArtworkData(orderId);
+  const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
 
   const itemsWithFallback = useMemo<ArtworkEntry[]>(() => {
     const orderItems = (data?.items ?? []) as AdminOrder["items"];
@@ -441,6 +602,36 @@ const OrderArtworkWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
     [itemsWithFallback],
   );
 
+  const handleDownload = useCallback(
+    async (key: string, baseName: string, images: string[]) => {
+      if (!images.length) {
+        return;
+      }
+
+      if (downloadingKey) {
+        return;
+      }
+
+      setDownloadingKey(key);
+
+      try {
+        const result = await downloadImageFiles(images, baseName);
+        if (result.failed > 0) {
+          showDownloadAlert(
+            "Some artwork files could not be downloaded. Please try again.",
+          );
+        }
+      } catch (downloadError) {
+        showDownloadAlert(
+          "Unable to download artwork files. Please check the file URLs and try again.",
+        );
+      } finally {
+        setDownloadingKey((current) => (current === key ? null : current));
+      }
+    },
+    [downloadingKey],
+  );
+
   return (
     <Container className="flex flex-col gap-y-0 p-0">
       <div className="flex flex-col gap-y-2 px-6 py-4">
@@ -485,51 +676,86 @@ const OrderArtworkWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
 
       {!!itemsWithFallback.length && (
         <div className="flex flex-col divide-y">
-          {itemsWithFallback.map((item, index) => (
-            <div
-              key={
-                item.line_item_id ??
-                item.cart_line_item_id ??
-                `line-item-${index}`
-              }
-              className="flex flex-col gap-y-4 px-6 py-4"
-            >
-              <div className="flex flex-col gap-y-2">
-                <Heading level="h3" className="text-base">
-                  {item.title || "Line item"}
-                </Heading>
-                <div className="flex flex-wrap items-center gap-2">
-                  {item.quantity !== null && item.quantity !== undefined && (
-                    <Badge size="xsmall" color="grey">
-                      Qty {item.quantity}
-                    </Badge>
-                  )}
-                  {item.cart_line_item_id ? (
-                    <Badge size="xsmall" color="purple">
-                      Cart item {shortenId(item.cart_line_item_id)}
-                    </Badge>
-                  ) : item.line_item_id ? (
-                    <Badge size="xsmall" color="purple">
-                      Line item {shortenId(item.line_item_id)}
-                    </Badge>
-                  ) : null}
+          {itemsWithFallback.map((item, index) => {
+            const baseIdentifier =
+              item.line_item_id ??
+              item.cart_line_item_id ??
+              `line-item-${index}`;
+            const rawTitle =
+              item.title?.trim() ||
+              item.cart_line_item_id ||
+              item.line_item_id ||
+              `line-item-${index + 1}`;
+            const normalizedTitle = sanitizeFileName(rawTitle) || "line-item";
+            const incomingKey = `${baseIdentifier}-incoming`;
+            const processedKey = `${baseIdentifier}-processed`;
+
+            return (
+              <div
+                key={baseIdentifier}
+                className="flex flex-col gap-y-4 px-6 py-4"
+              >
+                <div className="flex flex-col gap-y-2">
+                  <Heading level="h3" className="text-base">
+                    {item.title || "Line item"}
+                  </Heading>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {item.quantity !== null && item.quantity !== undefined && (
+                      <Badge size="xsmall" color="grey">
+                        Qty {item.quantity}
+                      </Badge>
+                    )}
+                    {item.cart_line_item_id ? (
+                      <Badge size="xsmall" color="purple">
+                        Cart item {shortenId(item.cart_line_item_id)}
+                      </Badge>
+                    ) : item.line_item_id ? (
+                      <Badge size="xsmall" color="purple">
+                        Line item {shortenId(item.line_item_id)}
+                      </Badge>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-y-4 gap-x-4 sm:flex-row">
+                  <ArtworkGroup
+                    label="Incoming"
+                    images={item.incoming}
+                    emptyLabel="No incoming files"
+                    className="sm:flex-1"
+                    onDownload={
+                      item.incoming.length
+                        ? () =>
+                            handleDownload(
+                              incomingKey,
+                              `${normalizedTitle}-incoming`,
+                              item.incoming,
+                            )
+                        : undefined
+                    }
+                    downloading={downloadingKey === incomingKey}
+                  />
+                  <ArtworkGroup
+                    label="Processed"
+                    images={item.processed}
+                    emptyLabel="No processed files"
+                    className="sm:flex-1"
+                    onDownload={
+                      item.processed.length
+                        ? () =>
+                            handleDownload(
+                              processedKey,
+                              `${normalizedTitle}-processed`,
+                              item.processed,
+                            )
+                        : undefined
+                    }
+                    downloading={downloadingKey === processedKey}
+                  />
                 </div>
               </div>
-
-              <div className="flex flex-col gap-y-4">
-                <ArtworkGroup
-                  label="Incoming"
-                  images={item.incoming}
-                  emptyLabel="No incoming files"
-                />
-                <ArtworkGroup
-                  label="Processed"
-                  images={item.processed}
-                  emptyLabel="No processed files"
-                />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </Container>

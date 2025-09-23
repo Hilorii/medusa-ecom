@@ -22,6 +22,7 @@ export type GgOrderPlacedProps = {
   support_email?: string; // optional: "support@yourshop.com"
   logo_url?: string; // optional: hosted logo (PNG/SVG)
   customer_name?: string; // optional: "John"
+  status_url?: string; // optional: order status page URL
 };
 
 export default function GgOrderPlacedEmail({
@@ -31,6 +32,7 @@ export default function GgOrderPlacedEmail({
   support_email,
   logo_url,
   customer_name,
+  status_url,
 }: GgOrderPlacedProps) {
   const greeting =
     customer_name && customer_name.trim().length
@@ -82,11 +84,11 @@ export default function GgOrderPlacedEmail({
 
           <Hr style={styles.hr} />
 
-          {/* Optional actions (no order page links) */}
+          {/* Optional actions */}
           <Section style={styles.actions}>
-            {shop_url ? (
-              <Button href={shop_url} style={styles.primaryBtn}>
-                Visit our store
+            {status_url ? (
+              <Button href={status_url} style={styles.primaryBtn}>
+                View order status
               </Button>
             ) : null}
             {support_email ? (

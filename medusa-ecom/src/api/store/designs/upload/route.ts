@@ -28,6 +28,7 @@ type GGUploadBody = {
 const GG_ALLOWED_ORIGINS = new Set<string>([
   "http://localhost:8000",
   "http://127.0.0.1:8000",
+  "https://192.168.1.109:8443/",
 ]);
 
 const GG_ALLOWED_MIME = new Set([

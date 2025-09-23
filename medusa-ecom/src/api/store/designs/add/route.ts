@@ -11,6 +11,7 @@ import {
   ggNormalizeCurrency,
 } from "../../../../lib/gg-pricing";
 import type { GGSelections } from "../../../../lib/gg-pricing/types";
+import { ggFinalizeIncomingFile } from "../../../../lib/gg-incoming";
 
 type Body = GGSelections & {
   fileName?: string;
@@ -219,9 +220,59 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     ]);
     console.log("[gg:add] I1: line item added");
 
+    let addedLineItemId: string | undefined;
+    let finalizedFileUrl: string | undefined;
+    let finalizedFileName: string | undefined;
+
+    if (fileUrl && fileUrl.startsWith("/static/incoming/")) {
+      try {
+        console.log("[gg:add] I2: resolving line item for", fileUrl);
+        const refreshed = await cartModule.retrieveCart(cart.id, {
+          relations: ["items"],
+        });
+        const matched = (refreshed?.items || []).find(
+          (it: any) => (it?.metadata || {}).fileUrl === fileUrl,
+        );
+        if (matched?.id) {
+          addedLineItemId = matched.id;
+          const finalized = await ggFinalizeIncomingFile({
+            currentUrl: fileUrl,
+            lineItemId: matched.id,
+          });
+          if (finalized) {
+            finalizedFileUrl = finalized.urlPath;
+            finalizedFileName = finalized.fileName;
+            const nextMeta = { ...(matched.metadata || {}) };
+            nextMeta.fileUrl = finalized.urlPath;
+            nextMeta.fileName = finalized.fileName;
+            nextMeta.cart_line_item_id = matched.id;
+            nextMeta.relativePath = finalized.relativePath;
+            await cartModule.updateLineItems([
+              {
+                id: matched.id,
+                metadata: nextMeta,
+              } as any,
+            ]);
+            console.log("[gg:add] I3: finalized incoming file", {
+              line_item_id: matched.id,
+              to: finalized.urlPath,
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("[gg:add] I!: failed to finalize incoming file", err);
+      }
+    }
+
     // J) Return lean JSON (avoid serializing the full cart object)
     console.log("[gg:add] J: returning lean payload");
-    return res.json({ ok: true, cart_id: cart.id });
+    return res.json({
+      ok: true,
+      cart_id: cart.id,
+      line_item_id: addedLineItemId || null,
+      fileUrl: finalizedFileUrl || fileUrl || null,
+      fileName: finalizedFileName || fileName || null,
+    });
 
     // — If you later want to return more data, prefer a lean mapping:
     // const updated = await cartModule.retrieveCart(cart.id)

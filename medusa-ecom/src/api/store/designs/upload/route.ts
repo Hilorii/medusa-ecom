@@ -1,33 +1,34 @@
 // File: src/api/store/designs/upload/route.ts
 // Endpoint: POST /store/designs/upload
-// Saves images strictly to ~/Desktop/medusa-upload OR ~/Pulpit/medusa-upload
+// Saves uploaded images into /static/incoming/<dd>-<mm>-<cart_line_item_id>.webp
+// Converts to WebP with reduced quality to keep file sizes manageable.
 // CORS is handled here (including OPTIONS preflight) to allow storefront on :8000.
 
 /* eslint-disable no-console */
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-import path from "path";
-import os from "os";
 import fs from "fs/promises";
-import { constants as FS } from "fs";
-import crypto from "crypto";
+import {
+  ggPrepareIncomingFinalTarget,
+  ggPrepareIncomingTempTarget,
+  ggSanitizeLineItemId,
+} from "../../../../lib/gg-incoming";
+import { ggConvertBufferToWebp } from "../../../../lib/gg-image";
 
 // ---------- Types ----------
 type GGUploadBody = {
   file_base64: string; // "data:image/png;base64,AAAA..." etc.
   originalName?: string; // optional client file name
-  cartId?: string; // optional for prefixing
+  cartId?: string; // legacy prefix support
+  cart_line_item_id?: string; // preferred identifier for naming
+  cartLineItemId?: string; // camelCase variant
+  lineItemId?: string; // extra alias
 };
 
 // ---------- Config ----------
-// Allowed frontend origins for CORS (adjust if you use a different port/host)
 const GG_ALLOWED_ORIGINS = new Set<string>([
   "http://localhost:8000",
   "http://127.0.0.1:8000",
 ]);
-
-// If you want to override the directory completely, set env GG_UPLOADS_DIR.
-// Otherwise we save ONLY to Desktop/Pulpit. No OneDrive fallbacks.
-const GG_ENV_DIR = process.env.GG_UPLOADS_DIR;
 
 const GG_ALLOWED_MIME = new Set([
   "image/png",
@@ -36,15 +37,16 @@ const GG_ALLOWED_MIME = new Set([
   "image/svg+xml",
 ]);
 const GG_MAX_BYTES = (Number(process.env.GG_UPLOAD_MAX_MB) || 6) * 1024 * 1024;
+const GG_WEBP_QUALITY = Number(process.env.GG_UPLOAD_WEBP_QUALITY) || 80;
+const GG_WEBP_MAX_DIMENSION =
+  Number(process.env.GG_UPLOAD_WEBP_MAX_DIMENSION) || 3000;
 
 // ---------- Small CORS helper ----------
 function ggSetCorsHeaders(req: MedusaRequest, res: MedusaResponse) {
-  // Pick Origin header from request and allow it if whitelisted
   const origin = (req.headers?.origin as string) || "";
   if (GG_ALLOWED_ORIGINS.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
-  // If you need cookies, also set: Access-Control-Allow-Credentials: "true"
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Content-Type, Authorization, medusa-session, X-Requested-With",
@@ -61,72 +63,14 @@ function ggParseDataUrl(dataUrl: string): { mime: string; buffer: Buffer } {
   return { mime, buffer };
 }
 
-function ggExtFromMime(mime: string): string {
-  switch (mime) {
-    case "image/png":
-      return ".png";
-    case "image/jpeg":
-      return ".jpg";
-    case "image/webp":
-      return ".webp";
-    case "image/svg+xml":
-      return ".svg";
-    default:
-      return "";
-  }
-}
-
-function ggSanitizeBase(name: string) {
-  // Keep alphanumerics, dot, dash and underscore; replace the rest with underscore
-  return (name || "").replace(/[^\w.\-]+/g, "_");
-}
-
-function ggRandomKey(prefix = "gg") {
-  return `${prefix}-${crypto.randomBytes(8).toString("hex")}`;
-}
-
-async function ggIsWritable(dir: string) {
-  try {
-    await fs.mkdir(dir, { recursive: true });
-    await fs.access(dir, FS.W_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Resolve uploads dir:
- *  1) If GG_UPLOADS_DIR is set AND writable → use it.
- *  2) Otherwise try: ~/Desktop/medusa-upload then ~/Pulpit/medusa-upload
- *  3) No OneDrive, no tmpdir fallback — hard requirement per user.
- */
-async function ggResolveUploadsDir(): Promise<{ dir: string; reason: string }> {
-  if (GG_ENV_DIR) {
-    if (await ggIsWritable(GG_ENV_DIR)) {
-      return { dir: GG_ENV_DIR, reason: "env:GG_UPLOADS_DIR" };
-    }
-    console.warn("[gg:upload] GG_UPLOADS_DIR not writable:", GG_ENV_DIR);
-    throw new Error("Configured GG_UPLOADS_DIR is not writable");
-  }
-
-  const home = process.env.USERPROFILE || os.homedir();
-  const desktop = path.join(home, "Desktop", "medusa-upload");
-  const pulpit = path.join(home, "Pulpit", "medusa-upload");
-
-  if (await ggIsWritable(desktop)) return { dir: desktop, reason: "Desktop" };
-  if (await ggIsWritable(pulpit)) return { dir: pulpit, reason: "Pulpit" };
-
-  // Hard fail if neither Desktop nor Pulpit is writable
-  throw new Error(
-    "Cannot write to Desktop/Pulpit. Create 'medusa-upload' on Desktop or Pulpit and allow write access",
-  );
+// NOTE: accept a *partial* body to avoid TS2345 when req.body is `unknown`
+function ggExtractLineItemId(body: Partial<GGUploadBody>): string | undefined {
+  return body.cart_line_item_id || body.cartLineItemId || body.lineItemId;
 }
 
 // ---------- OPTIONS (CORS preflight) ----------
 export const OPTIONS = async (req: MedusaRequest, res: MedusaResponse) => {
   ggSetCorsHeaders(req, res);
-  // No body for preflight
   return res.status(204).send();
 };
 
@@ -138,7 +82,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
     // Ensure JSON body is present
     const { file_base64, originalName, cartId } = (req.body ||
-      {}) as GGUploadBody;
+      {}) as Partial<GGUploadBody>;
     if (!file_base64) {
       console.warn("[gg:upload] invalid payload: file_base64 missing");
       return res
@@ -164,39 +108,58 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       });
     }
 
-    // Resolve target dir (strict Desktop/Pulpit or env override)
-    const { dir, reason } = await ggResolveUploadsDir();
-    console.log("[gg:upload] target dir =", dir, "(via:", reason + ")");
-
-    // Build filename
-    const baseNameNoExt = ggSanitizeBase(
-      (originalName || "upload").replace(/\.[^.]+$/, ""),
+    const providedLineItemId = ggExtractLineItemId(
+      (req.body || {}) as Partial<GGUploadBody>,
     );
-    const ext =
-      ggExtFromMime(mime) ||
-      (originalName ? ggSanitizeBase(path.extname(originalName)) : "") ||
-      ".bin";
-    const prefix = cartId ? ggSanitizeBase(cartId).slice(0, 16) : "gg";
-    const fileName = `${prefix}-${ggRandomKey("art")}-${baseNameNoExt}${ext}`;
-    const filePath = path.join(dir, fileName);
+    const sanitizedLineItemId = ggSanitizeLineItemId(providedLineItemId);
+    console.log("[gg:upload] meta", {
+      originalName,
+      cartId,
+      providedLineItemId,
+    });
 
-    // Write file
-    await fs.writeFile(filePath, buffer);
-    console.log("[gg:upload] saved", filePath, buffer.byteLength, "bytes");
+    if (!sanitizedLineItemId) {
+      console.warn(
+        "[gg:upload] no cart_line_item_id provided – storing as pending",
+      );
+    }
 
-    // Return a non-public token-like URL to be stored on line item metadata
-    const fileUrl = `desktop://${fileName}`;
+    const optimized = await ggConvertBufferToWebp(buffer, {
+      quality: GG_WEBP_QUALITY,
+      maxWidth: GG_WEBP_MAX_DIMENSION,
+      maxHeight: GG_WEBP_MAX_DIMENSION,
+    });
+
+    const target = sanitizedLineItemId
+      ? await ggPrepareIncomingFinalTarget(sanitizedLineItemId)
+      : await ggPrepareIncomingTempTarget();
+
+    await fs.writeFile(target.absPath, optimized);
+
+    console.log(
+      "[gg:upload] saved",
+      target.absPath,
+      "orig",
+      buffer.byteLength,
+      "bytes → webp",
+      optimized.byteLength,
+      "bytes",
+    );
 
     return res.status(201).json({
-      fileUrl,
-      fileName,
-      bytes: buffer.byteLength,
-      mime,
-      hint: `Saved to ${dir} (no public serving)`,
+      fileUrl: target.urlPath,
+      fileName: target.fileName,
+      bytes: optimized.byteLength,
+      mime: "image/webp",
+      original_mime: mime,
+      relativePath: target.relativePath,
+      stored_line_item_id: sanitizedLineItemId || null,
+      cart_line_item_id: providedLineItemId ?? null,
+      pending_line_item: !sanitizedLineItemId,
+      hint: `Saved under ${target.relDir}`,
     });
   } catch (e: any) {
     console.error("[gg:upload] ERR:", e?.message);
-    // Also set CORS on error responses
     ggSetCorsHeaders(req as any, res);
     return res.status(500).json({
       code: "server_error",

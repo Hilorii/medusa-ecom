@@ -266,13 +266,28 @@ export default function DesignPage() {
   const isUploadArt = art?.source === "upload"
 
   // Live price from backend (only when we have all required selections)
-  const [livePrice, setLivePrice] = useState<number>(0)
+  const derivedTotalEur = useMemo(() => {
+    return (
+      (size?.basePriceEur || 0) +
+      (flavor?.priceDeltaEur || 0) +
+      (color?.priceDeltaEur || 0)
+    )
+  }, [size?.basePriceEur, flavor?.priceDeltaEur, color?.priceDeltaEur])
+  const derivedDisplayPrice = useMemo(
+    () => convertEurToDisplay(derivedTotalEur),
+    [derivedTotalEur, fxRate]
+  )
+
+  const [livePriceDisplay, setLivePriceDisplay] = useState<number | null>(null)
+  const displayPrice = livePriceDisplay ?? derivedDisplayPrice
+
   useEffect(() => {
     ;(async () => {
       if (!size || !flavor || !color) {
-        setLivePrice(0)
+        setLivePriceDisplay(null)
         return
       }
+      setLivePriceDisplay(null)
       try {
         const backendSize = size.id.replace(/^s/, "") // "s21x21" -> "21x21"
         const p = await previewPrice({
@@ -293,11 +308,13 @@ export default function DesignPage() {
         setFxRate((prev) =>
           Math.abs(prev - nextRate) < 0.0001 ? prev : nextRate
         )
-        setLivePrice(Math.round((p.breakdown.total_eur || 0) * nextRate))
+        setLivePriceDisplay(Math.round((p.breakdown.total_eur || 0) * nextRate))
       } catch {
         const fallbackEur =
-          (size?.basePriceEur || 0) + (flavor?.priceDeltaEur || 0)
-        setLivePrice(Math.round(fallbackEur * fxRateRef.current))
+          (size?.basePriceEur || 0) +
+          (flavor?.priceDeltaEur || 0) +
+          (color?.priceDeltaEur || 0)
+        setLivePriceDisplay(Math.round(fallbackEur * fxRateRef.current))
       }
     })()
   }, [size?.id, flavor?.id, color?.id, cartId])
@@ -766,7 +783,7 @@ export default function DesignPage() {
                     <div className="dy-summary-total">
                       <dt>Total</dt>
                       <dd>
-                        {currencySymbol} {livePrice || 0}
+                        {currencySymbol} {displayPrice || 0}
                       </dd>
                     </div>
                   </dl>
@@ -850,6 +867,13 @@ export default function DesignPage() {
                   <li>{flavor?.label || "Choose a finish"}</li>
                   <li>{color?.label || "Choose a color"}</li>
                 </ul>
+
+                <div className="dy-preview-total" aria-live="polite">
+                  <span className="dy-preview-total-label">Total</span>
+                  <span className="dy-preview-total-value">
+                    {currencySymbol} {displayPrice || 0}
+                  </span>
+                </div>
               </div>
             </aside>
           </div>

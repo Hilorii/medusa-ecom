@@ -144,6 +144,15 @@ const Payment = ({
   }
 
   useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    const reviewQuery = createQueryString("step", "review")
+    router.prefetch(`${pathname}?${reviewQuery}`)
+  }, [createQueryString, isOpen, pathname, router])
+
+  useEffect(() => {
     setError(null)
   }, [isOpen])
 

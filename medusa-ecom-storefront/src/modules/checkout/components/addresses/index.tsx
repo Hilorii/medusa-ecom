@@ -8,7 +8,7 @@ import { Heading, Text, useToggleState } from "@medusajs/ui"
 import Divider from "@modules/common/components/divider"
 import Spinner from "@modules/common/icons/spinner"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useActionState } from "react"
+import { useActionState, useEffect } from "react"
 import BillingAddress from "../billing_address"
 import ErrorMessage from "../error-message"
 import ShippingAddress from "../shipping-address"
@@ -40,6 +40,14 @@ const Addresses = ({
   }
 
   const [message, formAction] = useActionState(setAddresses, null)
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    router.prefetch(`${pathname}?step=delivery`)
+  }, [isOpen, pathname, router])
 
   return (
     <div className="bg-white">

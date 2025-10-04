@@ -687,10 +687,12 @@ export async function updateCartRegionByCountry(countryCode: string) {
 
   await updateCart({ region_id: region.id })
 
-  const regionCacheTag = await getCacheTag("regions")
-  revalidateTag(regionCacheTag)
+  const [regionCacheTag, productsCacheTag] = await Promise.all([
+    getCacheTag("regions"),
+    getCacheTag("products"),
+  ])
 
-  const productsCacheTag = await getCacheTag("products")
+  revalidateTag(regionCacheTag)
   revalidateTag(productsCacheTag)
 
   return region

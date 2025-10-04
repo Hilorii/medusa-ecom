@@ -142,7 +142,10 @@ export async function debugCartShipping(cartId: string) {
 
 // Ensure at least one shipping method is attached for every shipping profile.
 async function ensureMethodsForAllProfiles(cartId: string) {
-  const cart = await getCart(cartId)
+  const [cart, options] = await Promise.all([
+    getCart(cartId),
+    listShippingOptions(cartId),
+  ])
 
   // Shipping options depend on the shipping address (at least country).
   if (!cart.shipping_address?.country_code) {
@@ -151,43 +154,61 @@ async function ensureMethodsForAllProfiles(cartId: string) {
     )
   }
 
-  const options = await listShippingOptions(cartId)
   if (!options.length) {
     throw new Error(
       "No shipping options available for this cart. Check region, country_code, and Shipping Options in the Admin."
     )
   }
 
-  // Group options by profile_id
-  const byProfile = new Map<string, StoreShippingOption[]>()
-  for (const o of options) {
-    const list = byProfile.get(o.profile_id) ?? []
-    list.push(o)
-    byProfile.set(o.profile_id, list)
-  }
+  // Group options by profile_id while also building a lookup table.
+  const byProfile = options.reduce<Map<string, StoreShippingOption[]>>(
+    (acc, option) => {
+      const list = acc.get(option.profile_id) ?? []
+      list.push(option)
+      acc.set(option.profile_id, list)
+      return acc
+    },
+    new Map()
+  )
 
-  // Mark already covered profiles using current shipping methods
   const optionProfileById = new Map(options.map((o) => [o.id, o.profile_id]))
   const covered = new Set<string>()
   for (const m of cart.shipping_methods ?? []) {
     const sid = m.shipping_option_id ?? m.shipping_option?.id
     const pid = sid ? optionProfileById.get(sid) : undefined
-    if (pid) covered.add(pid)
+    if (pid) {
+      covered.add(pid)
+    }
   }
 
-  // Add the cheapest option for each uncovered profile
   const missingWithoutOptions: string[] = []
+  const additions: Promise<void>[] = []
+
   // @ts-ignore
   for (const [profileId, opts] of byProfile.entries()) {
-    if (covered.has(profileId)) continue
+    if (covered.has(profileId)) {
+      continue
+    }
+
     if (!opts.length) {
       missingWithoutOptions.push(profileId)
       continue
     }
-    const cheapest = [...opts].sort(
-      (a, b) => optionPrice(a) - optionPrice(b)
-    )[0]
-    await addShippingMethod(cartId, cheapest.id)
+
+    let cheapest = opts[0]
+    for (let i = 1; i < opts.length; i++) {
+      const candidate = opts[i]
+      if (optionPrice(candidate) < optionPrice(cheapest)) {
+        cheapest = candidate
+      }
+    }
+
+    if (!cheapest?.id) {
+      missingWithoutOptions.push(profileId)
+      continue
+    }
+
+    additions.push(addShippingMethod(cartId, cheapest.id))
   }
 
   if (missingWithoutOptions.length) {
@@ -196,6 +217,10 @@ async function ensureMethodsForAllProfiles(cartId: string) {
         ", "
       )}. Add Shipping Options for these profiles or adjust the region/country.`
     )
+  }
+
+  if (additions.length) {
+    await Promise.all(additions)
   }
 }
 

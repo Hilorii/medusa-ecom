@@ -11,7 +11,7 @@ import ErrorMessage from "@modules/checkout/components/error-message"
 import Divider from "@modules/common/components/divider"
 import MedusaRadio from "@modules/common/components/radio"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { GgShippingEta } from "../delivery-time/index"
 
 const PICKUP_OPTION_ON = "__PICKUP_ON"
@@ -22,7 +22,7 @@ type ShippingProps = {
   availableShippingMethods: HttpTypes.StoreCartShippingOption[] | null
 }
 
-function formatAddress(address) {
+function formatAddress(address: any) {
   if (!address) {
     return ""
   }
@@ -71,41 +71,96 @@ const Shipping: React.FC<ShippingProps> = ({
 
   const isOpen = searchParams.get("step") === "delivery"
 
-  const _shippingMethods = availableShippingMethods?.filter(
-    (sm) => sm.service_zone?.fulfillment_set?.type !== "pickup"
-  )
+  const { shippingMethods, pickupMethods } = useMemo(() => {
+    const methods = availableShippingMethods ?? []
 
-  const _pickupMethods = availableShippingMethods?.filter(
-    (sm) => sm.service_zone?.fulfillment_set?.type === "pickup"
-  )
-
-  const hasPickupOptions = !!_pickupMethods?.length
-
-  useEffect(() => {
-    setIsLoadingPrices(true)
-
-    if (_shippingMethods?.length) {
-      const promises = _shippingMethods
-        .filter((sm) => sm.price_type === "calculated")
-        .map((sm) => calculatePriceForShippingOption(sm.id, cart.id))
-
-      if (promises.length) {
-        Promise.allSettled(promises).then((res) => {
-          const pricesMap: Record<string, number> = {}
-          res
-            .filter((r) => r.status === "fulfilled")
-            .forEach((p) => (pricesMap[p.value?.id || ""] = p.value?.amount!))
-
-          setCalculatedPricesMap(pricesMap)
-          setIsLoadingPrices(false)
-        })
-      }
-    }
-
-    if (_pickupMethods?.find((m) => m.id === shippingMethodId)) {
-      setShowPickupOptions(PICKUP_OPTION_ON)
+    return {
+      shippingMethods: methods.filter(
+        (sm) => sm.service_zone?.fulfillment_set?.type !== "pickup"
+      ),
+      pickupMethods: methods.filter(
+        (sm) => sm.service_zone?.fulfillment_set?.type === "pickup"
+      ),
     }
   }, [availableShippingMethods])
+
+  const hasPickupOptions = pickupMethods.length > 0
+
+  useEffect(() => {
+    if (!pickupMethods.length) {
+      return
+    }
+
+    if (pickupMethods.find((m) => m.id === shippingMethodId)) {
+      setShowPickupOptions(PICKUP_OPTION_ON)
+    }
+  }, [pickupMethods, shippingMethodId])
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (!shippingMethods.length) {
+      setCalculatedPricesMap((prev) => (Object.keys(prev).length ? {} : prev))
+      setIsLoadingPrices(false)
+      return
+    }
+
+    const calculatedOptions = shippingMethods.filter(
+      (sm) => sm.price_type === "calculated"
+    )
+
+    if (!calculatedOptions.length) {
+      setCalculatedPricesMap((prev) => (Object.keys(prev).length ? {} : prev))
+      setIsLoadingPrices(false)
+      return
+    }
+
+    setIsLoadingPrices(true)
+
+    Promise.allSettled(
+      calculatedOptions.map((sm) =>
+        calculatePriceForShippingOption(sm.id, cart.id)
+      )
+    )
+      .then((res) => {
+        if (cancelled) {
+          return
+        }
+
+        const pricesMap: Record<string, number> = {}
+        res.forEach((result) => {
+          if (
+            result.status === "fulfilled" &&
+            result.value?.id &&
+            typeof result.value?.amount === "number"
+          ) {
+            pricesMap[result.value.id] = result.value.amount
+          }
+        })
+
+        setCalculatedPricesMap((prev) => {
+          const next: Record<string, number> = {}
+
+          calculatedOptions.forEach((option) => {
+            const amount = pricesMap[option.id] ?? prev[option.id]
+            if (typeof amount === "number") {
+              next[option.id] = amount
+            }
+          })
+
+          return next
+        })
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingPrices(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [cart.id, shippingMethods])
 
   const handleEdit = () => {
     router.push(pathname + "?step=delivery", { scroll: false })
@@ -125,6 +180,10 @@ const Shipping: React.FC<ShippingProps> = ({
       setShowPickupOptions(PICKUP_OPTION_ON)
     } else {
       setShowPickupOptions(PICKUP_OPTION_OFF)
+    }
+
+    if (id === shippingMethodId) {
+      return
     }
 
     let currentId: string | null = null
@@ -148,6 +207,14 @@ const Shipping: React.FC<ShippingProps> = ({
   useEffect(() => {
     setError(null)
   }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    router.prefetch(`${pathname}?step=payment`)
+  }, [isOpen, pathname, router])
 
   return (
     <div className="bg-white">
@@ -199,8 +266,8 @@ const Shipping: React.FC<ShippingProps> = ({
                 {hasPickupOptions && (
                   <RadioGroup
                     value={showPickupOptions}
-                    onChange={(value) => {
-                      const id = _pickupMethods.find(
+                    onChange={() => {
+                      const id = pickupMethods.find(
                         (option) => !option.insufficient_inventory
                       )?.id
 
@@ -238,7 +305,7 @@ const Shipping: React.FC<ShippingProps> = ({
                   value={shippingMethodId}
                   onChange={(v) => handleSetShippingMethod(v, "shipping")}
                 >
-                  {_shippingMethods?.map((option) => {
+                  {shippingMethods?.map((option) => {
                     const isDisabled =
                       option.price_type === "calculated" &&
                       !isLoadingPrices &&
@@ -309,7 +376,7 @@ const Shipping: React.FC<ShippingProps> = ({
                     value={shippingMethodId}
                     onChange={(v) => handleSetShippingMethod(v, "pickup")}
                   >
-                    {_pickupMethods?.map((option) => {
+                    {pickupMethods?.map((option) => {
                       return (
                         <Radio
                           key={option.id}

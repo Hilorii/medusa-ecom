@@ -1,7 +1,10 @@
+"use client"
+
 import { deleteLineItem } from "@lib/data/cart"
 import { Spinner, Trash } from "@medusajs/icons"
 import { clx } from "@medusajs/ui"
-import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useState, useTransition } from "react"
 
 const DeleteButton = ({
   id,
@@ -13,12 +16,20 @@ const DeleteButton = ({
   className?: string
 }) => {
   const [isDeleting, setIsDeleting] = useState(false)
+  const router = useRouter()
+  const [, startTransition] = useTransition()
 
   const handleDelete = async (id: string) => {
     setIsDeleting(true)
-    await deleteLineItem(id).catch((err) => {
-      setIsDeleting(false)
-    })
+    await deleteLineItem(id)
+      .then(() => {
+        startTransition(() => {
+          router.refresh()
+        })
+      })
+      .catch(() => {
+        setIsDeleting(false)
+      })
   }
 
   return (

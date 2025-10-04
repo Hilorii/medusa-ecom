@@ -20,9 +20,15 @@ type ItemProps = {
   item: HttpTypes.StoreCartLineItem
   type?: "full" | "preview"
   currencyCode: string
+  isLoading?: boolean
 }
 
-const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
+const Item = ({
+  item,
+  type = "full",
+  currencyCode,
+  isLoading = false,
+}: ItemProps) => {
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -137,6 +143,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
             item={item}
             style="tight"
             currencyCode={currencyCode}
+            isLoading={isLoading}
           />
         </div>
       )}
@@ -151,6 +158,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
                 item={item}
                 style="tight"
                 currencyCode={currencyCode}
+                isLoading={isLoading}
               />
             </span>
           )}
@@ -158,6 +166,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
             item={item}
             style="tight"
             currencyCode={currencyCode}
+            isLoading={isLoading}
           />
         </span>
       </div>

@@ -7,9 +7,13 @@ import "./preview.css"
 
 type ItemsPreviewTemplateProps = {
   cart: HttpTypes.StoreCart
+  isLoading?: boolean
 }
 
-const ItemsPreviewTemplate = ({ cart }: ItemsPreviewTemplateProps) => {
+const ItemsPreviewTemplate = ({
+  cart,
+  isLoading = false,
+}: ItemsPreviewTemplateProps) => {
   const items = cart.items || []
   const hasOverflow = items.length > 4
 
@@ -30,6 +34,7 @@ const ItemsPreviewTemplate = ({ cart }: ItemsPreviewTemplateProps) => {
                   item={item}
                   type="preview"
                   currencyCode={cart.currency_code}
+                  isLoading={isLoading}
                 />
               ))
           : repeat(4).map((i) => <div key={i} className="rrc-skel-row" />)}

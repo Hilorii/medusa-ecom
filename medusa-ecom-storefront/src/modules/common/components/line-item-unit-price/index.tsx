@@ -1,17 +1,20 @@
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { clx } from "@medusajs/ui"
+import Spinner from "@modules/common/icons/spinner"
 
 type LineItemUnitPriceProps = {
   item: HttpTypes.StoreCartLineItem | HttpTypes.StoreOrderLineItem
   style?: "default" | "tight"
   currencyCode: string
+  isLoading?: boolean
 }
 
 const LineItemUnitPrice = ({
   item,
   style = "default",
   currencyCode,
+  isLoading = false,
 }: LineItemUnitPriceProps) => {
   const { total, original_total } = item
   const hasReducedPrice = total < original_total
@@ -36,6 +39,7 @@ const LineItemUnitPrice = ({
                 amount: original_total / item.quantity,
                 currency_code: currencyCode,
               })}
+              {isLoading && <Spinner size={12} className="ml-1" />}
             </span>
           </p>
           {style === "default" && (
@@ -53,6 +57,7 @@ const LineItemUnitPrice = ({
           amount: total / item.quantity,
           currency_code: currencyCode,
         })}
+        {isLoading && <Spinner size={12} className="ml-1" />}
       </span>
     </div>
   )

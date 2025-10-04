@@ -14,6 +14,7 @@ import { updateCartRegionByCountry } from "@lib/data/cart"
 import compareAddresses from "@lib/util/compare-addresses"
 import AddressSelect from "../address-select"
 import CountrySelect from "../country-select"
+import { CHECKOUT_REGION_UPDATE_EVENT } from "@modules/checkout/constants"
 
 const ShippingAddress = ({
   customer,
@@ -75,7 +76,18 @@ const ShippingAddress = ({
   )
 
   // check if customer has saved addresses that are in the current region
-  const [, startTransition] = useTransition()
+  const [isUpdatingRegion, startTransition] = useTransition()
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    const event = new CustomEvent(CHECKOUT_REGION_UPDATE_EVENT, {
+      detail: { isUpdating: isUpdatingRegion },
+    })
+
+    window.dispatchEvent(event)
+  }, [isUpdatingRegion])
   const previousCountry = useRef<string | undefined>(
     cart?.shipping_address?.country_code || undefined
   )

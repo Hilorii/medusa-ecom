@@ -2,6 +2,7 @@
 
 import { convertToLocale } from "@lib/util/money"
 import React from "react"
+import Spinner from "@modules/common/icons/spinner"
 
 type CartTotalsProps = {
   totals: {
@@ -14,9 +15,13 @@ type CartTotalsProps = {
     currency_code: string
     shipping_subtotal?: number | null
   }
+  isLoading?: boolean
 }
 
-const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
+const CartTotals: React.FC<CartTotalsProps> = ({
+  totals,
+  isLoading = false,
+}) => {
   const {
     currency_code,
     total,
@@ -34,45 +39,62 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
           <span className="flex gap-x-1 items-center">
             Subtotal (excl. shipping and taxes)
           </span>
-          <span data-testid="cart-subtotal" data-value={subtotal || 0}>
+          <span
+            className="flex items-center gap-x-2"
+            data-testid="cart-subtotal"
+            data-value={subtotal || 0}
+          >
             {convertToLocale({ amount: subtotal ?? 0, currency_code })}
+            {isLoading && <Spinner size={16} />}
           </span>
         </div>
         {!!discount_total && (
           <div className="flex items-center justify-between">
             <span>Discount</span>
             <span
-              className="text-ui-fg-interactive"
+              className="flex items-center gap-x-2 text-ui-fg-interactive"
               data-testid="cart-discount"
               data-value={discount_total || 0}
             >
               -{" "}
               {convertToLocale({ amount: discount_total ?? 0, currency_code })}
+              {isLoading && <Spinner size={16} />}
             </span>
           </div>
         )}
         <div className="flex items-center justify-between">
           <span>Shipping</span>
-          <span data-testid="cart-shipping" data-value={shipping_subtotal || 0}>
+          <span
+            className="flex items-center gap-x-2"
+            data-testid="cart-shipping"
+            data-value={shipping_subtotal || 0}
+          >
             {convertToLocale({ amount: shipping_subtotal ?? 0, currency_code })}
+            {isLoading && <Spinner size={16} />}
           </span>
         </div>
         <div className="flex justify-between">
           <span className="flex gap-x-1 items-center ">Taxes</span>
-          <span data-testid="cart-taxes" data-value={tax_total || 0}>
+          <span
+            className="flex items-center gap-x-2"
+            data-testid="cart-taxes"
+            data-value={tax_total || 0}
+          >
             {convertToLocale({ amount: tax_total ?? 0, currency_code })}
+            {isLoading && <Spinner size={16} />}
           </span>
         </div>
         {!!gift_card_total && (
           <div className="flex items-center justify-between">
             <span>Gift card</span>
             <span
-              className="text-ui-fg-interactive"
+              className="flex items-center gap-x-2 text-ui-fg-interactive"
               data-testid="cart-gift-card-amount"
               data-value={gift_card_total || 0}
             >
               -{" "}
               {convertToLocale({ amount: gift_card_total ?? 0, currency_code })}
+              {isLoading && <Spinner size={16} />}
             </span>
           </div>
         )}
@@ -81,11 +103,12 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
       <div className="flex items-center justify-between text-ui-fg-base mb-2 txt-medium ">
         <span>Total</span>
         <span
-          className="txt-xlarge-plus"
+          className="txt-xlarge-plus flex items-center gap-x-2"
           data-testid="cart-total"
           data-value={total || 0}
         >
           {convertToLocale({ amount: total ?? 0, currency_code })}
+          {isLoading && <Spinner size={16} />}
         </span>
       </div>
       <div className="h-px w-full border-b border-gray-200 mt-4" />

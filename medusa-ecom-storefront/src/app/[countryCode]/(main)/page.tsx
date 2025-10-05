@@ -6,7 +6,7 @@ import Hero from "@modules/home/components/hero"
 import InteractiveShowcase from "@modules/home/components/interactive-showcase"
 import SustainabilitySpotlight from "@modules/home/components/sustainability"
 import Testimonials from "@modules/home/components/testimonials"
-import { listCollections } from "@lib/data/collections"
+// import { listCollections } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 import Feedback from "@modules/home/components/feedback"
 
@@ -25,11 +25,11 @@ export default async function Home(props: {
 
   const region = await getRegion(countryCode)
 
-  const { collections } = await listCollections({
-    fields: "id, handle, title",
-  })
+  // const { collections } = await listCollections({
+  //   fields: "id, handle, title",
+  // })
 
-  if (!collections || !region) {
+  if (!region) {
     return null
   }
 

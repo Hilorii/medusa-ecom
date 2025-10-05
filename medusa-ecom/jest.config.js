@@ -3,17 +3,18 @@ loadEnv("test", process.cwd());
 
 module.exports = {
   transform: {
-    "^.+\\.[jt]s$": [
+    "^.+\\.[jt]sx?$": [
       "@swc/jest",
       {
         jsc: {
           parser: { syntax: "typescript", decorators: true },
+          target: "es2022",
         },
       },
     ],
   },
   testEnvironment: "node",
-  moduleFileExtensions: ["js", "ts", "json"],
+  moduleFileExtensions: ["js", "ts", "tsx", "json"],
   modulePathIgnorePatterns: ["dist/", "<rootDir>/.medusa/"],
   setupFiles: ["./integration-tests/setup.js"],
 };

@@ -131,6 +131,14 @@ const StripePaymentButton = ({
       let attempt = 0
       const maxAttempts = 10
 
+      const delayForAttempt = (currentAttempt: number) => {
+        if (currentAttempt === 0) {
+          return 0
+        }
+        // Krótki, wykładniczy backoff z limitem, żeby nie „młotkować” Stripe'a
+        return Math.min(200 * 2 ** (currentAttempt - 1), 1000)
+      }
+
       while (attempt <= maxAttempts) {
         if (intent) {
           const status = intent.status
@@ -150,9 +158,10 @@ const StripePaymentButton = ({
           return intent
         }
 
-        await new Promise((resolve) =>
-          setTimeout(resolve, attempt === 0 ? 0 : 1500)
-        )
+        const delay = delayForAttempt(attempt)
+        if (delay > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delay))
+        }
 
         const { paymentIntent, error } = await stripe.retrievePaymentIntent(
           clientSecret

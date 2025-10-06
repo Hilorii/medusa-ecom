@@ -23,9 +23,12 @@ export default async function CheckoutForm({
     return null
   }
 
-  const shippingMethods = await listCartShippingMethods(cart.id)
-  const paymentMethods = await listCartPaymentMethods(cart.region?.id ?? "")
-  const regions = (await listRegions()) ?? []
+  const [shippingMethods, paymentMethods, regionsResult] = await Promise.all([
+    listCartShippingMethods(cart.id),
+    listCartPaymentMethods(cart.region?.id ?? ""),
+    listRegions(),
+  ])
+  const regions = regionsResult ?? []
 
   if (!shippingMethods || !paymentMethods) {
     return null

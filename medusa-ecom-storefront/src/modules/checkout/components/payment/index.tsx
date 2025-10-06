@@ -25,11 +25,6 @@ const Payment = ({
   cart: any
   availablePaymentMethods: any[]
 }) => {
-  const activeSession = cart.payment_collection?.payment_sessions?.find(
-    (paymentSession: any) => isSessionReady(paymentSession.status)
-  )
-  const shippingMethodCount = cart?.shipping_methods?.length ?? 0
-
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const {
@@ -45,6 +40,28 @@ const Payment = ({
     setIsBlikValid,
   } = useCheckoutPayment()
 
+  const sessions = cart.payment_collection?.payment_sessions ?? []
+  const shippingMethodCount = cart?.shipping_methods?.length ?? 0
+
+  const readySessions = useMemo(
+    () =>
+      sessions.filter((paymentSession: any) =>
+        isSessionReady(paymentSession.status)
+      ),
+    [sessions]
+  )
+
+  const selectedReadySession = useMemo(
+    () =>
+      readySessions.find(
+        (paymentSession: any) =>
+          paymentSession.provider_id === selectedPaymentMethod
+      ),
+    [readySessions, selectedPaymentMethod]
+  )
+
+  const activeSession = selectedReadySession ?? readySessions[0]
+
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -55,27 +72,35 @@ const Payment = ({
   const isBlikPayment = selectedPaymentMethod === "pp_stripe-blik_stripe"
 
   // Helper: refresh page so server components re-fetch cart and Stripe client_secret appears
-  const refreshCart = () => {
+  const refreshCart = useCallback(() => {
     // NOTE: router.refresh() will re-render the page and re-run server loaders
     router.refresh()
-  }
+  }, [router])
 
   const setPaymentMethod = async (method: string) => {
     setError(null)
-    setSelectedPaymentMethod(method)
+    const isNewSelection = method !== selectedPaymentMethod
 
-    if (method !== "pp_stripe_stripe") {
-      setCardBrand(null)
-      setIsCardComplete(false)
+    if (isNewSelection) {
+      setSelectedPaymentMethod(method)
+
+      if (method !== "pp_stripe_stripe") {
+        setCardBrand(null)
+        setIsCardComplete(false)
+      }
+
+      if (method !== "pp_stripe-blik_stripe") {
+        setBlikCode("")
+        setIsBlikValid(false)
+      }
     }
 
-    if (method !== "pp_stripe-blik_stripe") {
-      setBlikCode("")
-      setIsBlikValid(false)
-    }
+    const hasActiveSessionForMethod = readySessions.some(
+      (paymentSession: any) => paymentSession.provider_id === method
+    )
 
     // If Stripe or other providers that need a session immediately -> create it and refresh
-    if (isStripeFunc(method)) {
+    if (isStripeFunc(method) && !hasActiveSessionForMethod) {
       try {
         await initiatePaymentSession(cart, {
           provider_id: method,
@@ -115,12 +140,11 @@ const Payment = ({
   const handleSubmit = async () => {
     setIsLoading(true)
     try {
-      const shouldInputCard = isCardPayment && !activeSession
+      const shouldInputCard = isCardPayment && !selectedReadySession
 
-      const checkActiveSession =
-        activeSession?.provider_id === selectedPaymentMethod
+      const hasMatchingSession = Boolean(selectedReadySession)
 
-      if (!checkActiveSession) {
+      if (!hasMatchingSession) {
         await initiatePaymentSession(cart, {
           provider_id: selectedPaymentMethod,
         })

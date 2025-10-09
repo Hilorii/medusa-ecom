@@ -37,7 +37,6 @@ type ShippingOptionWithServiceZone = HttpTypes.StoreCartShippingOption & {
 type ShippingProps = {
   cart: HttpTypes.StoreCart
   availableShippingMethods: ShippingOptionWithServiceZone[] | null
-  initialCalculatedPrices?: Record<string, number> | undefined
 }
 
 function formatAddress(address: any) {
@@ -69,7 +68,6 @@ function formatAddress(address: any) {
 const Shipping: React.FC<ShippingProps> = ({
   cart,
   availableShippingMethods,
-  initialCalculatedPrices,
 }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingPrices, setIsLoadingPrices] = useState(true)
@@ -79,7 +77,7 @@ const Shipping: React.FC<ShippingProps> = ({
 
   const [calculatedPricesMap, setCalculatedPricesMap] = useState<
     Record<string, number>
-  >(() => ({ ...(initialCalculatedPrices ?? {}) }))
+  >({})
 
   const [error, setError] = useState<string | null>(null)
 
@@ -120,27 +118,6 @@ const Shipping: React.FC<ShippingProps> = ({
       setShowPickupOptions(PICKUP_OPTION_ON)
     }
   }, [pickupMethods, shippingMethodId])
-
-  // Merge cen z propsa, jeśli przyszły po pierwszym renderze lub się zmieniły
-  useEffect(() => {
-    if (!initialCalculatedPrices) {
-      return
-    }
-
-    setCalculatedPricesMap((prev) => {
-      let didUpdate = false
-      const next: Record<string, number> = { ...prev }
-
-      Object.entries(initialCalculatedPrices).forEach(([id, amount]) => {
-        if (typeof amount === "number" && next[id] !== amount) {
-          didUpdate = true
-          next[id] = amount
-        }
-      })
-
-      return didUpdate ? next : prev
-    })
-  }, [initialCalculatedPrices])
 
   useEffect(() => {
     let cancelled = false

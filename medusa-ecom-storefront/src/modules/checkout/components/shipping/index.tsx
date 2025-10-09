@@ -37,6 +37,7 @@ type ShippingOptionWithServiceZone = HttpTypes.StoreCartShippingOption & {
 type ShippingProps = {
   cart: HttpTypes.StoreCart
   availableShippingMethods: ShippingOptionWithServiceZone[] | null
+  initialCalculatedPrices?: Record<string, number> | undefined
 }
 
 function formatAddress(address: any) {
@@ -68,15 +69,18 @@ function formatAddress(address: any) {
 const Shipping: React.FC<ShippingProps> = ({
   cart,
   availableShippingMethods,
+  initialCalculatedPrices,
 }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingPrices, setIsLoadingPrices] = useState(true)
 
   const [showPickupOptions, setShowPickupOptions] =
     useState<string>(PICKUP_OPTION_OFF)
+
   const [calculatedPricesMap, setCalculatedPricesMap] = useState<
     Record<string, number>
-  >({})
+  >(() => ({ ...(initialCalculatedPrices ?? {}) }))
+
   const [error, setError] = useState<string | null>(null)
 
   // ✅ zawsze controlled: nigdy undefined
@@ -117,12 +121,33 @@ const Shipping: React.FC<ShippingProps> = ({
     }
   }, [pickupMethods, shippingMethodId])
 
+  // Merge cen z propsa, jeśli przyszły po pierwszym renderze lub się zmieniły
+  useEffect(() => {
+    if (!initialCalculatedPrices) {
+      return
+    }
+
+    setCalculatedPricesMap((prev) => {
+      let didUpdate = false
+      const next: Record<string, number> = { ...prev }
+
+      Object.entries(initialCalculatedPrices).forEach(([id, amount]) => {
+        if (typeof amount === "number" && next[id] !== amount) {
+          didUpdate = true
+          next[id] = amount
+        }
+      })
+
+      return didUpdate ? next : prev
+    })
+  }, [initialCalculatedPrices])
+
   useEffect(() => {
     let cancelled = false
 
     if (!shippingMethods.length) {
       setCalculatedPricesMap((prev) => (Object.keys(prev).length ? {} : prev))
-      setIsLoadingPrices(false)
+      setIsLoadingPrices((prev) => (prev ? false : prev))
       return
     }
 
@@ -132,14 +157,25 @@ const Shipping: React.FC<ShippingProps> = ({
 
     if (!calculatedOptions.length) {
       setCalculatedPricesMap((prev) => (Object.keys(prev).length ? {} : prev))
-      setIsLoadingPrices(false)
+      setIsLoadingPrices((prev) => (prev ? false : prev))
+      return
+    }
+
+    // pobieramy tylko te kalkulowane opcje, których jeszcze nie mamy w mapie
+    const missingCalculatedOptions = calculatedOptions.filter(
+      (option) =>
+        !Object.prototype.hasOwnProperty.call(calculatedPricesMap, option.id)
+    )
+
+    if (!missingCalculatedOptions.length) {
+      setIsLoadingPrices((prev) => (prev ? false : prev))
       return
     }
 
     setIsLoadingPrices(true)
 
     Promise.allSettled(
-      calculatedOptions.map((sm) =>
+      missingCalculatedOptions.map((sm) =>
         calculatePriceForShippingOption(sm.id, cart.id)
       )
     )
@@ -158,12 +194,22 @@ const Shipping: React.FC<ShippingProps> = ({
         })
 
         setCalculatedPricesMap((prev) => {
-          const next: Record<string, number> = {}
-          calculatedOptions.forEach((option) => {
-            const amount = pricesMap[option.id] ?? prev[option.id]
-            if (typeof amount === "number") next[option.id] = amount
+          if (!missingCalculatedOptions.length) {
+            return prev
+          }
+
+          let didUpdate = false
+          const next: Record<string, number> = { ...prev }
+
+          missingCalculatedOptions.forEach((option) => {
+            const amount = pricesMap[option.id]
+            if (typeof amount === "number" && next[option.id] !== amount) {
+              didUpdate = true
+              next[option.id] = amount
+            }
           })
-          return next
+
+          return didUpdate ? next : prev
         })
       })
       .finally(() => {
@@ -173,7 +219,7 @@ const Shipping: React.FC<ShippingProps> = ({
     return () => {
       cancelled = true
     }
-  }, [cart.id, shippingMethods])
+  }, [cart.id, shippingMethods, calculatedPricesMap])
 
   const handleEdit = () => {
     router.push(pathname + "?step=delivery", { scroll: false })

@@ -1,4 +1,7 @@
-import { listCartShippingMethods } from "@lib/data/fulfillment"
+import {
+  calculatePriceForShippingOption,
+  listCartShippingMethods,
+} from "@lib/data/fulfillment"
 import { listCartPaymentMethods } from "@lib/data/payment"
 import { HttpTypes } from "@medusajs/types"
 import Addresses from "@modules/checkout/components/addresses"
@@ -34,6 +37,31 @@ export default async function CheckoutForm({
     return null
   }
 
+  const calculatedShippingMethods = (shippingMethods ?? []).filter(
+    (option) => option.price_type === "calculated"
+  )
+
+  let initialCalculatedPrices: Record<string, number> | undefined
+
+  if (calculatedShippingMethods.length) {
+    const results = await Promise.allSettled(
+      calculatedShippingMethods.map((option) =>
+        calculatePriceForShippingOption(option.id, cart.id)
+      )
+    )
+
+    results.forEach((result) => {
+      if (
+        result.status === "fulfilled" &&
+        result.value?.id &&
+        typeof result.value.amount === "number"
+      ) {
+        initialCalculatedPrices = initialCalculatedPrices || {}
+        initialCalculatedPrices[result.value.id] = result.value.amount
+      }
+    })
+  }
+
   const activeSession = cart.payment_collection?.payment_sessions?.find(
     (session) => isSessionReady(session.status)
   )
@@ -43,7 +71,11 @@ export default async function CheckoutForm({
       <div className="gg-checkout-form w-full grid grid-cols-1 gap-y-8">
         <Addresses cart={cart} customer={customer} regions={regions} />
 
-        <Shipping cart={cart} availableShippingMethods={shippingMethods} />
+        <Shipping
+          cart={cart}
+          availableShippingMethods={shippingMethods}
+          initialCalculatedPrices={initialCalculatedPrices}
+        />
 
         <Payment cart={cart} availablePaymentMethods={paymentMethods} />
 
